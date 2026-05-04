@@ -9,8 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        edge: {
+          bg: "#0A0A0A",
+          surface: "#1A1A1A",
+          border: "rgba(255,255,255,0.08)",
+          red: "#E8291C",
+          gold: "#F5A623",
+          muted: "rgba(255,255,255,0.55)",
+        },
+      },
+      fontFamily: {
+        condensed: ["Barlow Condensed", "sans-serif"],
+        body: ["Barlow", "sans-serif"],
       },
     },
   },

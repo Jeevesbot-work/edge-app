@@ -1,27 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0A0A0A;
+  --foreground: #FFFFFF;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #0A0A0A;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: #FFFFFF;
+  background: #0A0A0A;
+  font-family: 'Barlow', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* PWA safe area support */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 0;
+}
+
+/* Range slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: rgba(255,255,255,0.15);
+  height: 4px;
+  border-radius: 2px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -8px;
+  background-color: #E8291C;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+}
+
+/* Animated typing dots */
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.typing-dot {
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+/* Breathwork circle animation */
+@keyframes breathe-in {
+  0% { transform: scale(0.6); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes breathe-out {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.6); opacity: 0.6; }
+}
+@keyframes breathe-hold {
+  0%, 100% { transform: scale(1); opacity: 1; }
+}
+
+.breathe-in { animation: breathe-in var(--duration, 4s) ease-in-out forwards; }
+.breathe-out { animation: breathe-out var(--duration, 4s) ease-in-out forwards; }
+.breathe-hold { animation: breathe-hold var(--duration, 4s) ease-in-out forwards; }
+
