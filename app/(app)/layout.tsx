@@ -24,8 +24,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   if (!user) redirect("/login");
-  if (!profile?.full_name) redirect("/onboarding");
-  if (!profile?.approved) redirect("/pending");
+
+  // Admin bypasses profile/approval checks
+  const isAdmin = user.email === process.env.ADMIN_EMAIL;
+  if (!isAdmin) {
+    if (!profile?.full_name) redirect("/onboarding");
+    if (!profile?.approved) redirect("/pending");
+  }
 
   return (
     <div className="min-h-screen bg-edge-bg pb-20">
