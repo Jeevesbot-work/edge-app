@@ -3,26 +3,29 @@ import { createClient } from "@/lib/supabase/server";
 import BottomNav from "@/components/BottomNav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  let profile = null;
 
-  if (!user) {
-    redirect("/login");
+  try {
+    const supabase = createClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+
+    if (user) {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("approved, full_name")
+        .eq("id", user.id)
+        .single();
+      profile = profileData;
+    }
+  } catch {
+    // Supabase unavailable — fall through to redirect
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("approved, full_name")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.full_name) {
-    redirect("/onboarding");
-  }
-
-  if (!profile?.approved) {
-    redirect("/pending");
-  }
+  if (!user) redirect("/login");
+  if (!profile?.full_name) redirect("/onboarding");
+  if (!profile?.approved) redirect("/pending");
 
   return (
     <div className="min-h-screen bg-edge-bg pb-20">
