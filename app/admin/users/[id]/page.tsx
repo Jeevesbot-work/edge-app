@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import ApproveButton from "./ApproveButton";
 import AddNoteForm from "./AddNoteForm";
+import ResendLinkButton from "./ResendLinkButton";
 
 export default async function AdminUserPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -43,10 +44,13 @@ export default async function AdminUserPage({ params }: { params: { id: string }
           <h1 className="font-condensed font-black text-2xl uppercase tracking-wide">{profile?.full_name ?? "Unknown"}</h1>
           <p className="text-edge-muted text-xs">{profile?.email}</p>
         </div>
-        {!profile?.approved && <ApproveButton userId={userId} />}
-        {profile?.approved && (
-          <span className="bg-green-500/20 text-green-400 font-condensed text-xs uppercase px-3 py-1.5 rounded-lg">Active</span>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!profile?.approved && <ApproveButton userId={userId} />}
+          {profile?.approved && (
+            <span className="bg-green-500/20 text-green-400 font-condensed text-xs uppercase px-3 py-1.5 rounded-lg">Active</span>
+          )}
+          {profile?.email && <ResendLinkButton email={profile.email} />}
+        </div>
       </div>
 
       {/* Profile summary */}

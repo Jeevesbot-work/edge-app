@@ -1,116 +1,158 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { LESSONS } from "@/lib/data/lessons";
-import { getPhaseColor } from "@/lib/utils";
 
 const AUDIO_LESSONS = [
-  { id: 1, title: "Identity Beats Motivation", duration: "12 min", category: "Identity" },
-  { id: 2, title: "Why Midlife Feels Different", duration: "14 min", category: "Mindset" },
-  { id: 3, title: "The Back2Strong Code", duration: "10 min", category: "Identity" },
-  { id: 4, title: "Post-40 Playbook", duration: "18 min", category: "Training" },
-  { id: 5, title: "Consistency Over Intensity", duration: "11 min", category: "Training" },
-  { id: 6, title: "Recovery is King", duration: "13 min", category: "Recovery" },
-  { id: 7, title: "The STRONG Operating System", duration: "15 min", category: "Mindset" },
-  { id: 8, title: "Maximize Recovery Without Sleeping More", duration: "16 min", category: "Recovery" },
+  { id: 1, title: "Identity Beats Motivation", duration: "12 min", category: "Identity", file: "/audio/identity-beats-motivation.mp3" },
+  { id: 2, title: "Why Midlife Feels Different", duration: "14 min", category: "Mindset", file: "/audio/why-midlife-feels-different.mp3" },
+  { id: 3, title: "The Back2Strong Code", duration: "10 min", category: "Identity", file: "/audio/back2strong-code.mp3" },
+  { id: 4, title: "Post-40 Playbook", duration: "18 min", category: "Training", file: "/audio/40-plus-playbook.mp3" },
+  { id: 5, title: "Consistency Over Intensity", duration: "11 min", category: "Training", file: "/audio/training-after-40.mp3" },
+  { id: 6, title: "Maximize Recovery", duration: "13 min", category: "Recovery", file: "/audio/maximize-recovery.mp3" },
+  { id: 7, title: "The STRONG Operating System", duration: "15 min", category: "Mindset", file: "/audio/strong-operating-system.mp3" },
 ];
 
 const BREATHWORK = [
-  { id: "box", name: "Box Breathing", subtitle: "Navy SEAL technique for stress and focus", rounds: 4, duration: "64 seconds", color: "#E8291C" },
-  { id: "478", name: "4-7-8 Breathing", subtitle: "Relaxation and sleep technique", rounds: 4, duration: "76 seconds", color: "#F5A623" },
-  { id: "power", name: "Power Breathing", subtitle: "Quick energy and clarity boost", rounds: 10, duration: "60 seconds", color: "#3B82F6" },
+  { id: "box", name: "Box Breathing", subtitle: "Stress control · focus", duration: "64 sec" },
+  { id: "478", name: "4-7-8 Breathing", subtitle: "Relaxation · sleep", duration: "76 sec" },
+  { id: "power", name: "Power Breathing", subtitle: "Energy · clarity", duration: "60 sec" },
 ];
 
-export default async function MindPage() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+const PHASES = [
+  { code: "S", name: "Self-Confrontation", days: [1, 2, 3, 4, 5] },
+  { code: "T", name: "Truth Mapping", days: [6, 7, 8, 9, 10] },
+  { code: "R", name: "Reflective Evolution", days: [11, 12, 13, 14, 15] },
+  { code: "O", name: "Ownership Routines", days: [16, 17, 18, 19, 20] },
+  { code: "N", name: "Non-Negotiables", days: [21, 22, 23, 24, 25] },
+  { code: "G", name: "Growth Loops", days: [26, 27, 28, 29, 30] },
+];
 
-  const [{ data: programme }, { data: completions }] = await Promise.all([
-    supabase.from("programme_state").select("*").eq("user_id", user!.id).single(),
-    supabase.from("lesson_completions").select("day_number, cycle").eq("user_id", user!.id),
-  ]);
+function AudioPlayer({ lesson }: { lesson: typeof AUDIO_LESSONS[0] }) {
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-  const currentDay = programme?.current_day ?? 1;
-  const currentCycle = programme ? Math.ceil(currentDay / 30) : 1;
-  const dayInCycle = ((currentDay - 1) % 30) + 1;
-  const today = LESSONS.find((l) => l.day === dayInCycle);
+  function toggle() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) { audio.pause(); } else { audio.play(); }
+    setPlaying(!playing);
+  }
 
-  const completedDays = new Set((completions ?? []).map((c) => `${c.cycle}-${c.day_number}`));
+  function onTimeUpdate() {
+    const audio = audioRef.current;
+    if (!audio || !audio.duration) return;
+    setProgress((audio.currentTime / audio.duration) * 100);
+  }
 
-  const phaseGroups = [
-    { code: "S", name: "Self-Confrontation", days: [1, 2, 3, 4, 5] },
-    { code: "T", name: "Truth Mapping", days: [6, 7, 8, 9, 10] },
-    { code: "R", name: "Reflective Evolution", days: [11, 12, 13, 14, 15] },
-    { code: "O", name: "Ownership Routines", days: [16, 17, 18, 19, 20] },
-    { code: "N", name: "Non-Negotiables", days: [21, 22, 23, 24, 25] },
-    { code: "G", name: "Growth Loops", days: [26, 27, 28, 29, 30] },
-  ];
+  function seek(e: React.MouseEvent<HTMLDivElement>) {
+    const audio = audioRef.current;
+    if (!audio || !audio.duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  }
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-safe pb-6">
-      <div className="py-4 mb-2">
-        <h1 className="font-condensed font-black text-4xl uppercase tracking-wide">Mind</h1>
-        <p className="text-edge-muted text-sm mt-1">STRONG System · Cycle {currentCycle} · Day {dayInCycle}</p>
+    <div style={{ background: "#171B21", borderRadius: 16, padding: "14px 16px", border: "1px solid #252A32" }}>
+      <audio ref={audioRef} src={lesson.file} onTimeUpdate={onTimeUpdate} onEnded={() => { setPlaying(false); setProgress(0); }} preload="none" />
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <button
+          onClick={toggle}
+          style={{ width: 44, height: 44, borderRadius: "50%", background: playing ? "rgba(200,150,90,0.15)" : "#C8965A", border: playing ? "1px solid rgba(200,150,90,0.4)" : "none", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer" }}
+        >
+          {playing ? (
+            <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16, color: "#C8965A" }}>
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16, color: "#0E1014", marginLeft: 2 }}>
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 15, color: "#F2F1ED", fontWeight: 400, lineHeight: 1.2, marginBottom: 2 }}>
+            {lesson.title}
+          </p>
+          <p style={{ fontSize: 10, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginBottom: 8 }}>
+            {lesson.duration} · {lesson.category}
+          </p>
+          <div style={{ height: 2, background: "#252A32", borderRadius: 99, cursor: "pointer" }} onClick={seek}>
+            <div style={{ height: "100%", background: "#C8965A", borderRadius: 99, width: `${progress}%`, transition: "width 0.1s" }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function MindPage() {
+  const currentDay = 1;
+  const today = LESSONS.find((l) => l.day === currentDay);
+
+  return (
+    <div className="max-w-lg mx-auto px-5 pb-8" style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 16px)" }}>
+
+      {/* Header */}
+      <div style={{ paddingTop: 8, paddingBottom: 20 }}>
+        <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 4 }}>
+          The STRONG System
+        </p>
+        <h1 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 36, fontWeight: 400, color: "#F2F1ED", lineHeight: 1 }}>
+          Mind.
+        </h1>
       </div>
 
       {/* Today's lesson */}
       {today && (
-        <Link href={`/mind/${dayInCycle}`}>
-          <div className="rounded-xl p-4 border border-edge-gold/30 mb-6 relative overflow-hidden active:opacity-90"
-            style={{ background: "linear-gradient(135deg, rgba(245,166,35,0.1), rgba(26,26,26,1))" }}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-edge-gold font-condensed font-bold text-xs uppercase tracking-widest">Today</span>
-              <span className="text-edge-muted text-xs">· Phase {today.phaseCode}</span>
-            </div>
-            <h2 className="font-condensed font-black text-2xl uppercase tracking-wide text-white mb-1 leading-tight">
-              Day {dayInCycle}: {today.title}
+        <Link href={`/mind/${currentDay}`} style={{ display: "block", marginBottom: 16, textDecoration: "none" }}>
+          <div style={{ position: "relative", background: "#171B21", borderRadius: 20, border: "1px solid rgba(200,150,90,0.2)", padding: "20px 20px 20px 24px", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 2.5, background: "#C8965A", borderRadius: "20px 0 0 20px" }} />
+            <p style={{ fontSize: 9, color: "#C8965A", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 8 }}>
+              Today · Day {currentDay}
+            </p>
+            <h2 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 24, fontWeight: 400, color: "#F2F1ED", lineHeight: 1.2, marginBottom: 4 }}>
+              {today.title}
             </h2>
-            <p className="text-edge-muted text-sm mb-4 font-body">{today.phase}</p>
-            <div className="flex items-center gap-2">
-              <span className="bg-edge-red text-white font-condensed font-bold text-xs uppercase tracking-wide px-3 py-1.5 rounded-lg">
-                Start Lesson
-              </span>
-              <span className="text-edge-muted text-xs">5-8 min</span>
+            <p style={{ fontSize: 11, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginBottom: 14 }}>{today.phase}</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+              <span style={{ fontSize: 10, color: "#F2F1ED", fontFamily: "Inter, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.15em" }}>Start lesson</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 12, height: 12, color: "#C8965A" }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              <span style={{ fontSize: 10, color: "#3D434D", fontFamily: "Inter, sans-serif", marginLeft: 4 }}>5–8 min</span>
             </div>
           </div>
         </Link>
       )}
 
       {/* STRONG System phases */}
-      <div className="mb-6">
-        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
-          STRONG System — Cycle {currentCycle}
-        </h2>
-        <div className="space-y-2">
-          {phaseGroups.map(({ code, name, days }) => {
-            const isActive = days.includes(dayInCycle);
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 12 }}>
+          30-Day Programme
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {PHASES.map(({ code, name, days }) => {
+            const isActive = days.includes(currentDay);
             return (
-              <div key={code} className={`bg-edge-surface rounded-xl border ${isActive ? "border-edge-gold/30" : "border-white/[0.08]"}`}>
-                <div className="flex items-center gap-3 p-3">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${getPhaseColor(code)}20` }}
-                  >
-                    <span className="font-condensed font-black text-sm" style={{ color: getPhaseColor(code) }}>{code}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-condensed font-bold text-sm uppercase tracking-wide text-white leading-none">{name}</p>
-                    <p className="text-edge-muted text-xs mt-0.5">Days {days[0]}–{days[days.length - 1]}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    {days.map((d) => (
-                      <Link key={d} href={`/mind/${d}`}>
-                        <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-xs font-condensed font-bold transition-colors ${
-                          completedDays.has(`${currentCycle}-${d}`)
-                            ? "bg-green-500/20 text-green-400"
-                            : d === dayInCycle
-                            ? "border border-edge-gold text-edge-gold"
-                            : "bg-white/5 text-edge-muted"
-                        }`}>
-                          {d}
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
+              <div key={code} style={{ background: "#171B21", borderRadius: 14, border: `1px solid ${isActive ? "rgba(200,150,90,0.2)" : "#252A32"}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: isActive ? "rgba(200,150,90,0.1)" : "rgba(255,255,255,0.03)", border: `1px solid ${isActive ? "rgba(200,150,90,0.2)" : "#252A32"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 16, color: isActive ? "#C8965A" : "#3D434D", fontWeight: 400 }}>{code}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 12, color: isActive ? "#F2F1ED" : "#9BA3AF", fontFamily: "Inter, sans-serif", fontWeight: 500, marginBottom: 1 }}>{name}</p>
+                  <p style={{ fontSize: 10, color: "#3D434D", fontFamily: "Inter, sans-serif" }}>Days {days[0]}–{days[days.length - 1]}</p>
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  {days.map((d) => (
+                    <Link key={d} href={`/mind/${d}`} style={{ textDecoration: "none" }}>
+                      <div style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontFamily: "Inter, sans-serif", fontWeight: 600, background: d === currentDay ? "#C8965A" : d < currentDay ? "rgba(52,211,153,0.12)" : "#252A32", color: d === currentDay ? "#0E1014" : d < currentDay ? "#34D399" : "#3D434D" }}>
+                        {d}
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               </div>
             );
@@ -118,45 +160,35 @@ export default async function MindPage() {
         </div>
       </div>
 
-      {/* Audio lessons */}
-      <div className="mb-6">
-        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+      {/* Audio Lessons */}
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 12 }}>
           Audio Lessons
-        </h2>
-        <div className="space-y-2">
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {AUDIO_LESSONS.map((lesson) => (
-            <div key={lesson.id} className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] flex items-center gap-4">
-              <button className="w-10 h-10 rounded-full bg-edge-red flex items-center justify-center flex-shrink-0 active:scale-95">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white ml-0.5">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className="font-body font-semibold text-sm text-white truncate">{lesson.title}</p>
-                <p className="text-edge-muted text-xs mt-0.5">{lesson.duration} · {lesson.category}</p>
-              </div>
-            </div>
+            <AudioPlayer key={lesson.id} lesson={lesson} />
           ))}
         </div>
       </div>
 
       {/* Breathwork */}
-      <div>
-        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+      <div style={{ marginBottom: 16 }}>
+        <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 12 }}>
           Breathwork
-        </h2>
-        <div className="space-y-3">
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {BREATHWORK.map((bw) => (
-            <Link key={bw.id} href={`/breathwork/${bw.id}`}>
-              <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] flex items-center gap-4 active:bg-white/5">
-                <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0" style={{ borderColor: bw.color }}>
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: bw.color, opacity: 0.6 }} />
+            <Link key={bw.id} href={`/breathwork/${bw.id}`} style={{ textDecoration: "none" }}>
+              <div style={{ background: "#171B21", borderRadius: 14, border: "1px solid #252A32", padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", border: "1.5px solid rgba(200,150,90,0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C8965A" }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-condensed font-bold text-sm uppercase tracking-wide text-white">{bw.name}</p>
-                  <p className="text-edge-muted text-xs mt-0.5">{bw.rounds} rounds · {bw.duration}</p>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 15, color: "#F2F1ED", fontWeight: 400, lineHeight: 1.2 }}>{bw.name}</p>
+                  <p style={{ fontSize: 10, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginTop: 2 }}>{bw.subtitle} · {bw.duration}</p>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 14, height: 14, color: "#3D434D", flexShrink: 0 }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </div>
@@ -164,6 +196,7 @@ export default async function MindPage() {
           ))}
         </div>
       </div>
+
     </div>
   );
 }

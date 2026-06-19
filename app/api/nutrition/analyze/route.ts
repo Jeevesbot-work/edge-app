@@ -4,6 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const JSON_SCHEMA = `{
+  "meal_name": "short descriptive name",
+  "calories": estimated total calories as integer,
+  "protein_g": estimated protein in grams as number,
+  "carbs_g": estimated carbs in grams as number,
+  "fat_g": estimated fat in grams as number,
+  "edge_comment": "1-2 sentences in the voice of Edge — direct, warm British male coach. No emojis. No hype. Acknowledge the food choice honestly and connect it to protein-first fuelling."
+}`;
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createClient();
@@ -15,48 +24,58 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
-    const { image, mimeType } = await req.json();
-    if (!image) return NextResponse.json({ error: "No image" }, { status: 400 });
+    const { image, mimeType, text } = await req.json();
 
-    const validType = (mimeType === "image/jpeg" || mimeType === "image/png" || mimeType === "image/webp")
-      ? mimeType
-      : "image/jpeg";
+    if (!image && !text) return NextResponse.json({ error: "No image or description provided" }, { status: 400 });
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 400,
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: validType,
-              data: image,
-            },
-          },
-          {
-            type: "text",
-            text: `You are a nutrition analyst for a men's fitness coaching app. Analyse this food photo and respond ONLY with a JSON object — no other text, no markdown, no code fences.
+    let raw: string;
+
+    if (text) {
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 400,
+        messages: [{
+          role: "user",
+          content: `You are a nutrition analyst for a men's fitness coaching app. Analyse this meal description and respond ONLY with a JSON object — no other text, no markdown, no code fences.
+
+Meal: "${text}"
 
 The JSON must have exactly these fields:
-{
-  "meal_name": "short descriptive name of what you see",
-  "calories": estimated total calories as integer,
-  "protein_g": estimated protein in grams as number,
-  "carbs_g": estimated carbs in grams as number,
-  "fat_g": estimated fat in grams as number,
-  "edge_comment": "a 1-2 sentence comment in the voice of Edge — a direct, warm British male coach. No emojis. No hype. Acknowledge the food choice honestly then connect it to the protein-first philosophy."
-}
+${JSON_SCHEMA}
 
-Be realistic with estimates. If you cannot identify food clearly, give your best guess and name it accordingly. Always return the JSON object.`,
-          }
-        ]
-      }]
-    });
+Be realistic with estimates based on typical portion sizes. Always return valid JSON.`,
+        }],
+      });
+      raw = response.content[0].type === "text" ? response.content[0].text : "";
+    } else {
+      const validType = (mimeType === "image/jpeg" || mimeType === "image/png" || mimeType === "image/webp")
+        ? mimeType as "image/jpeg" | "image/png" | "image/webp"
+        : "image/jpeg" as const;
 
-    const raw = response.content[0].type === "text" ? response.content[0].text : "";
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 400,
+        messages: [{
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: validType, data: image },
+            },
+            {
+              type: "text",
+              text: `You are a nutrition analyst for a men's fitness coaching app. Analyse this food photo and respond ONLY with a JSON object — no other text, no markdown, no code fences.
+
+The JSON must have exactly these fields:
+${JSON_SCHEMA}
+
+Be realistic with estimates. If you cannot identify food clearly, give your best guess. Always return valid JSON.`,
+            },
+          ],
+        }],
+      });
+      raw = response.content[0].type === "text" ? response.content[0].text : "";
+    }
 
     let analysis: {
       meal_name: string;
@@ -71,7 +90,7 @@ Be realistic with estimates. If you cannot identify food clearly, give your best
       analysis = JSON.parse(raw);
     } catch {
       console.error("[nutrition] Failed to parse Claude response:", raw);
-      return NextResponse.json({ error: "Could not analyse the image" }, { status: 422 });
+      return NextResponse.json({ error: "Could not analyse the meal" }, { status: 422 });
     }
 
     const { data: log, error } = await supabase

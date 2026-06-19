@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     await supabase.from("messages").insert({ user_id: user.id, role: "user", content: message });
 
     const stream = await anthropic.messages.stream({
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: 300,
       system: systemPrompt,
       messages: [...history, { role: "user", content: message }],

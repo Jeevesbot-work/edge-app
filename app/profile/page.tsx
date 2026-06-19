@@ -25,6 +25,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingNutrition, setEditingNutrition] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
+  const [proteinInput, setProteinInput] = useState("");
+  const [calorieInput, setCalorieInput] = useState("");
+  const [savingNutrition, setSavingNutrition] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -33,10 +38,38 @@ export default function ProfilePage() {
       if (!user) { router.push("/login"); return; }
       const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       setProfile(data);
+      setWeightInput(data?.body_weight_kg?.toString() ?? "");
+      setProteinInput((data?.protein_target ?? 160).toString());
+      setCalorieInput((data?.calorie_target ?? 2200).toString());
       setLoading(false);
     }
     load();
   }, [router]);
+
+  function recalcFromWeight(kg: string) {
+    setWeightInput(kg);
+    const w = parseFloat(kg);
+    if (!isNaN(w) && w > 0) {
+      setProteinInput(String(Math.round(w * 2)));
+      setCalorieInput(String(Math.round(w * 33)));
+    }
+  }
+
+  async function saveNutrition() {
+    setSavingNutrition(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const updates = {
+      body_weight_kg: parseFloat(weightInput) || null,
+      protein_target: parseInt(proteinInput) || 160,
+      calorie_target: parseInt(calorieInput) || 2200,
+    };
+    await supabase.from("profiles").update(updates).eq("id", user.id);
+    setProfile((p) => p ? { ...p, ...updates } : p);
+    setEditingNutrition(false);
+    setSavingNutrition(false);
+  }
 
   async function signOut() {
     const supabase = createClient();
@@ -47,7 +80,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-edge-bg flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-edge-red border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-edge-bronze border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -68,7 +101,7 @@ export default function ProfilePage() {
 
       {/* Avatar */}
       <div className="flex flex-col items-center py-6 mb-6">
-        <div className="w-20 h-20 rounded-full bg-edge-red flex items-center justify-center mb-3">
+        <div className="w-20 h-20 rounded-full bg-edge-bronze flex items-center justify-center mb-3">
           <span className="font-condensed font-black text-3xl text-white">
             {profile?.full_name?.[0]?.toUpperCase() ?? "?"}
           </span>
@@ -77,7 +110,7 @@ export default function ProfilePage() {
           {profile?.full_name ?? "Unknown"}
         </h2>
         <p className="text-edge-muted text-sm">{profile?.email}</p>
-        <span className={`mt-2 text-xs font-condensed uppercase px-3 py-1 rounded-lg ${profile?.approved ? "bg-green-500/20 text-green-400" : "bg-edge-red/20 text-edge-red"}`}>
+        <span className={`mt-2 text-xs font-condensed uppercase px-3 py-1 rounded-lg ${profile?.approved ? "bg-green-500/20 text-green-400" : "bg-edge-bronze/20 text-edge-bronze"}`}>
           {profile?.approved ? "Active member" : "Pending approval"}
         </span>
       </div>
@@ -96,6 +129,83 @@ export default function ProfilePage() {
             <span className="text-white text-sm font-body text-right max-w-[60%]">{value}</span>
           </div>
         ))}
+      </div>
+
+      {/* Nutrition targets */}
+      <div className="bg-edge-surface rounded-xl border border-white/[0.08] mb-4 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+          <span className="text-xs font-condensed uppercase tracking-widest text-edge-muted">Nutrition Targets</span>
+          {!editingNutrition && (
+            <button
+              onClick={() => setEditingNutrition(true)}
+              className="text-xs text-edge-bronze font-condensed uppercase tracking-widest"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+
+        {!editingNutrition ? (
+          <div className="divide-y divide-white/[0.06]">
+            {[
+              { label: "Body weight", value: profile?.body_weight_kg ? `${profile.body_weight_kg} kg` : "—" },
+              { label: "Daily protein", value: `${profile?.protein_target ?? 160}g` },
+              { label: "Daily calories", value: `${profile?.calorie_target ?? 2200} kcal` },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex justify-between px-4 py-3">
+                <span className="text-edge-muted text-sm font-body">{label}</span>
+                <span className="text-white text-sm font-body">{value}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 space-y-3">
+            <div>
+              <label className="text-edge-muted text-xs font-body uppercase tracking-widest block mb-1">Body weight (kg)</label>
+              <input
+                type="number"
+                value={weightInput}
+                onChange={(e) => recalcFromWeight(e.target.value)}
+                placeholder="e.g. 85"
+                className="w-full bg-edge-card border border-white/10 rounded-xl px-4 py-3 text-white font-body text-base placeholder:text-edge-muted focus:outline-none focus:border-edge-bronze"
+              />
+              <p className="text-edge-muted text-xs mt-1">Changing weight auto-recalculates targets below.</p>
+            </div>
+            <div>
+              <label className="text-edge-muted text-xs font-body uppercase tracking-widest block mb-1">Daily protein (g)</label>
+              <input
+                type="number"
+                value={proteinInput}
+                onChange={(e) => setProteinInput(e.target.value)}
+                className="w-full bg-edge-card border border-white/10 rounded-xl px-4 py-3 text-white font-body text-base focus:outline-none focus:border-edge-bronze"
+              />
+            </div>
+            <div>
+              <label className="text-edge-muted text-xs font-body uppercase tracking-widest block mb-1">Daily calories (kcal)</label>
+              <input
+                type="number"
+                value={calorieInput}
+                onChange={(e) => setCalorieInput(e.target.value)}
+                className="w-full bg-edge-card border border-white/10 rounded-xl px-4 py-3 text-white font-body text-base focus:outline-none focus:border-edge-bronze"
+              />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setEditingNutrition(false)}
+                className="flex-1 bg-transparent border border-white/10 text-white/60 font-condensed font-bold text-sm uppercase tracking-widest py-3 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveNutrition}
+                disabled={savingNutrition}
+                className="flex-1 bg-edge-bronze text-white font-condensed font-bold text-sm uppercase tracking-widest py-3 rounded-xl disabled:opacity-60 active:scale-95"
+              >
+                {savingNutrition ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Brand lines */}

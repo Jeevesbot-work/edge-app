@@ -1,12 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400&family=Barlow+Condensed:wght@400;600;700;900&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #0A0A0A;
-  --foreground: #FFFFFF;
+  --background: #0E1014;
+  --foreground: #F2F1ED;
 }
 
 * {
@@ -14,15 +14,26 @@
 }
 
 html {
-  background: #0A0A0A;
+  background: #0E1014;
 }
 
 body {
-  color: #FFFFFF;
-  background: #0A0A0A;
-  font-family: 'Barlow', sans-serif;
+  color: #F2F1ED;
+  background: #0E1014;
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Native-feel press state — add to any tappable card or button */
+.pressable {
+  transition: transform 0.12s cubic-bezier(0.22,1,0.36,1), opacity 0.12s ease;
+  cursor: pointer;
+}
+.pressable:active {
+  transform: scale(0.97);
+  opacity: 0.82;
 }
 
 /* PWA safe area support */
@@ -58,11 +69,26 @@ input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   margin-top: -8px;
-  background-color: #E8291C;
+  background-color: #C8965A;
   height: 20px;
   width: 20px;
   border-radius: 50%;
 }
+
+/* Entrance animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.anim-0 { animation: fade-up 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-1 { animation: fade-up 0.5s cubic-bezier(0.22,1,0.36,1) 0.07s both; }
+.anim-2 { animation: fade-up 0.5s cubic-bezier(0.22,1,0.36,1) 0.14s both; }
+.anim-3 { animation: fade-up 0.5s cubic-bezier(0.22,1,0.36,1) 0.21s both; }
+.anim-4 { animation: fade-up 0.5s cubic-bezier(0.22,1,0.36,1) 0.28s both; }
 
 /* Animated typing dots */
 @keyframes bounce {
@@ -75,6 +101,9 @@ input[type="range"]::-webkit-slider-thumb {
 }
 .typing-dot:nth-child(1) { animation-delay: -0.32s; }
 .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+/* Spin — used by loading spinners across all pages */
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Breathwork circle animation */
 @keyframes breathe-in {
