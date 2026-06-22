@@ -92,7 +92,7 @@ export default function NutritionPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div>
-          <h1 className="font-condensed font-black text-2xl uppercase tracking-wide leading-none">Fuel</h1>
+          <h1 className="font-display text-3xl leading-none">Fuel</h1>
           <p className="text-edge-muted text-xs">Track & cook</p>
         </div>
       </div>
