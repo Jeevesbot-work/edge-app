@@ -10,7 +10,7 @@ import AssignProgrammeButton from "./AssignProgrammeButton";
 export default async function AdminUserPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.email !== process.env.ADMIN_EMAIL) redirect("/login");
+  if (!user || !["n.adams3@icloud.com","nicosmada3@googlemail.com","nick@back2strong.online"].includes(user.email ?? "")) redirect("/login");
 
   const admin = createAdminClient();
   const userId = params.id;
