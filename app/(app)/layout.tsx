@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import BottomNav from "@/components/BottomNav";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +12,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     user = data.user;
 
     if (user) {
-      const { data: profileData } = await supabase
+      const admin = createAdminClient();
+      const { data: profileData } = await admin
         .from("profiles")
         .select("approved, full_name")
         .eq("id", user.id)
@@ -33,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-edge-bg pb-20">
+    <div className="min-h-screen pb-20" style={{ background: "#0E1014" }}>
       {children}
       <BottomNav />
     </div>

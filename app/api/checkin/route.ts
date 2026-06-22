@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
 
   const body = await req.json();
-  const { sleep_quality, morning_energy, stress_level, soreness, motivation, notes } = body;
+  const { sleep_quality, morning_energy, stress_level, soreness, motivation, notes, weight_kg } = body;
   const today = new Date().toISOString().split("T")[0];
 
   const avg = (sleep_quality + morning_energy + (6 - stress_level) + (6 - soreness) + motivation) / 5;
@@ -44,7 +44,7 @@ Maximum 2 sentences. Reference his specific scores or notes if relevant.`;
   });
 
   const aiResponse = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 150,
     system: systemPrompt,
     messages: [{ role: "user", content: prompt }],
@@ -65,5 +65,17 @@ Maximum 2 sentences. Reference his specific scores or notes if relevant.`;
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Weight is saved separately and defensively: if the weight_kg column doesn't
+  // exist yet, this fails silently rather than breaking the whole check-in.
+  if (weight_kg != null) {
+    const { error: wErr } = await supabase
+      .from("check_ins")
+      .update({ weight_kg })
+      .eq("user_id", user.id)
+      .eq("date", today);
+    if (wErr) console.warn("[checkin] weight_kg not saved (column missing?):", wErr.message);
+  }
+
   return NextResponse.json({ response: edgeResponse });
 }

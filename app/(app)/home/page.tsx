@@ -1,234 +1,342 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { getGreeting, formatDate } from "@/lib/utils";
 import { getLesson } from "@/lib/data/lessons";
+import { getClientProgramme, blockSessionKeys } from "@/lib/data/programme-loader";
 
-export default async function HomePage() {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  const [{ data: profile }, { data: programme }, { data: todayCheckin }, { data: recentSessions }] =
-    await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user!.id).single(),
-      supabase.from("programme_state").select("*").eq("user_id", user!.id).single(),
-      supabase.from("check_ins").select("*").eq("user_id", user!.id).eq("date", new Date().toISOString().split("T")[0]).single(),
-      supabase.from("training_sessions").select("*").eq("user_id", user!.id).not("completed_at", "is", null).order("completed_at", { ascending: false }).limit(5),
-    ]);
+function getGreeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
+}
 
-  const firstName = profile?.full_name?.split(" ")[0] ?? "mate";
-  const currentDay = programme?.current_day ?? 1;
-  const currentWeek = programme?.current_week ?? 1;
-  const todayLesson = getLesson(((currentDay - 1) % 30) + 1);
+function getDateLine(): string {
+  return new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+}
 
-  const sessionsThisWeek = (recentSessions ?? []).filter((s) => {
-    const d = new Date(s.completed_at!);
-    const now = new Date();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - now.getDay() + 1);
-    monday.setHours(0, 0, 0, 0);
-    return d >= monday;
-  }).length;
+function ReadinessRing({ score, max = 5 }: { score: number; max?: number }) {
+  const r = 36;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(score / max, 1);
+  const offset = circ * (1 - pct);
+  const displayScore = Math.round(score * 20); // convert 0-5 to 0-100
 
-  const nextSessionType = sessionsThisWeek === 0 ? "push" : sessionsThisWeek === 1 ? "squat" : "pull";
-  const sessionNames: Record<string, string> = {
-    push: "Upper Body Push",
-    squat: "Lower Body Squat",
-    pull: "Upper Body Pull",
-  };
-
-  const phaseNames: Record<string, string> = {
-    S: "Self-Confrontation",
-    T: "Truth Mapping",
-    R: "Reflective Evolution",
-    O: "Ownership Routines",
-    N: "Non-Negotiables",
-    G: "Growth Loops",
-  };
+  const color = displayScore >= 70 ? "#C8965A" : displayScore >= 40 ? "#F5A623" : "#9BA3AF";
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-safe">
-      {/* Header */}
-      <div className="flex items-center justify-between py-4 mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-edge-red flex items-center justify-center">
-            <span className="font-condensed font-black text-xs text-white tracking-wider">B2S</span>
-          </div>
-        </div>
-        <Link href="/profile" className="w-9 h-9 rounded-full bg-edge-surface border border-white/10 flex items-center justify-center">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-white/60">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </Link>
-      </div>
-
-      {/* Greeting */}
-      <div className="mb-6">
-        <p className="text-edge-muted text-sm font-body">{getGreeting()}, {firstName}</p>
-        <h1 className="font-condensed font-black text-4xl uppercase tracking-wide leading-none mt-1">
-          {formatDate(new Date())}
-        </h1>
-        <p className="text-edge-muted text-xs mt-1">
-          Week {currentWeek} · Day {currentDay} · {todayLesson ? phaseNames[todayLesson.phaseCode] : "Foundation Phase"}
-        </p>
-      </div>
-
-      {/* Edge Daily Message */}
-      <EdgeDailyMessage userId={user!.id} />
-
-      {/* Today's Actions */}
-      <div className="space-y-3 mb-6">
-        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted">
-          Today's Actions
-        </h2>
-
-        {/* Train */}
-        <Link href={`/train/${nextSessionType}`}>
-          <div className="bg-edge-surface rounded-xl p-4 flex items-center gap-4 border border-white/[0.08] active:bg-white/5">
-            <div className="w-10 h-10 rounded-lg bg-edge-red/20 flex items-center justify-center flex-shrink-0">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-red">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-condensed font-bold text-sm uppercase tracking-wide text-white">
-                Today's Session
-              </p>
-              <p className="text-edge-muted text-xs mt-0.5 truncate">
-                {sessionNames[nextSessionType]} · 45 min · 6 exercises
-              </p>
-            </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </Link>
-
-        {/* Mind */}
-        {todayLesson && (
-          <Link href={`/mind/${((currentDay - 1) % 30) + 1}`}>
-            <div className="bg-edge-surface rounded-xl p-4 flex items-center gap-4 border border-white/[0.08] active:bg-white/5">
-              <div className="w-10 h-10 rounded-lg bg-edge-gold/20 flex items-center justify-center flex-shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-gold">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-condensed font-bold text-sm uppercase tracking-wide text-white">
-                  Day {((currentDay - 1) % 30) + 1} Lesson
-                </p>
-                <p className="text-edge-muted text-xs mt-0.5 truncate">
-                  {todayLesson.title} · {todayLesson.phaseCode} Phase
-                </p>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </Link>
-        )}
-
-        {/* Check-in */}
-        <Link href="/checkin">
-          <div className={`bg-edge-surface rounded-xl p-4 flex items-center gap-4 border active:bg-white/5 ${todayCheckin ? "border-green-500/30" : "border-white/[0.08]"}`}>
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${todayCheckin ? "bg-green-500/20" : "bg-white/10"}`}>
-              {todayCheckin ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-green-400">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-white/60">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-condensed font-bold text-sm uppercase tracking-wide text-white">
-                Morning Check-in
-              </p>
-              <p className="text-edge-muted text-xs mt-0.5">
-                {todayCheckin ? "Done today" : "60 seconds · Not done yet"}
-              </p>
-            </div>
-            {!todayCheckin && (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            )}
-          </div>
-        </Link>
-      </div>
-
-      {/* Week progress */}
-      <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted">
-            This Week
-          </p>
-          <p className="text-white text-xs font-condensed font-bold">
-            {sessionsThisWeek}<span className="text-edge-muted">/3 sessions</span>
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {["Mon", "Wed", "Fri"].map((day, i) => (
-            <div
-              key={day}
-              className={`flex-1 rounded-lg py-3 text-center ${
-                i < sessionsThisWeek
-                  ? "bg-edge-red/20 border border-edge-red/40"
-                  : "bg-white/5 border border-white/10"
-              }`}
-            >
-              <span className={`font-condensed font-bold text-xs uppercase ${i < sessionsThisWeek ? "text-edge-red" : "text-edge-muted"}`}>
-                {day}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Protein target quick card */}
-      <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted">
-            Protein Target
-          </p>
-          <Link href="/nutrition" className="text-xs text-edge-gold font-body">View</Link>
-        </div>
-        <div className="flex items-baseline gap-1">
-          <span className="font-condensed font-black text-3xl text-white">160</span>
-          <span className="text-edge-muted text-sm">g / day</span>
-        </div>
-        <p className="text-edge-muted text-xs mt-1">Protein first. Everything else follows.</p>
+    <div className="relative flex items-center justify-center" style={{ width: 88, height: 88 }}>
+      <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90 absolute inset-0">
+        <circle cx="44" cy="44" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+        <circle
+          cx="44" cy="44" r={r} fill="none"
+          stroke={color} strokeWidth="3"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1)" }}
+        />
+      </svg>
+      <div className="relative z-10 flex flex-col items-center">
+        <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 26, fontWeight: 400, color: "#F2F1ED", lineHeight: 1 }}>
+          {displayScore}
+        </span>
+        <span style={{ fontSize: 9, color: "#9BA3AF", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "Inter, sans-serif", marginTop: 2 }}>
+          Ready
+        </span>
       </div>
     </div>
   );
 }
 
-async function EdgeDailyMessage({ userId }: { userId: string }) {
+export default async function HomePage() {
   const supabase = createClient();
-  const { data: messages } = await supabase
-    .from("messages")
-    .select("content")
-    .eq("user_id", userId)
-    .eq("role", "assistant")
-    .order("created_at", { ascending: false })
-    .limit(1);
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const lastMessage = messages?.[0]?.content;
+  const today = new Date().toISOString().split("T")[0];
+
+  const [
+    { data: profile },
+    { data: programme },
+    { data: todayCheckin },
+    { data: recentSessions },
+    { data: lastMessage },
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user!.id).single(),
+    supabase.from("programme_state").select("*").eq("user_id", user!.id).single(),
+    supabase.from("check_ins").select("*").eq("user_id", user!.id).eq("date", today).single(),
+    supabase.from("training_sessions").select("session_type, completed_at").eq("user_id", user!.id).not("completed_at", "is", null).order("completed_at", { ascending: false }).limit(7),
+    supabase.from("messages").select("content").eq("user_id", user!.id).eq("role", "assistant").order("created_at", { ascending: false }).limit(1),
+  ]);
+
+  const firstName = profile?.full_name?.split(" ")[0] ?? "there";
+  const currentDay = programme?.current_day ?? 1;
+  const currentWeek = programme?.current_week ?? 1;
+
+  // Per-client programme → today's scheduled session.
+  const clientProgramme = await getClientProgramme(user!.id);
+  const prog = clientProgramme?.programme ?? null;
+  const sessions = clientProgramme?.sessions ?? {};
+  const todayName = DAY_NAMES[new Date().getDay()];
+  const todayPlan = prog?.weeklySchedule.find((d) => d.day === todayName) ?? null;
+  const todayLift =
+    todayPlan && todayPlan.type === "lift" && todayPlan.sessionKey && (todayPlan.fromWeek ?? 1) <= currentWeek
+      ? sessions[todayPlan.sessionKey]
+      : null;
+  const lessonDay = ((currentDay - 1) % 30) + 1;
+  const todayLesson = getLesson(lessonDay);
+
+  // Readiness score: sleep/energy/motivation are positive, stress/soreness inverted (1=good, 5=bad)
+  let readinessScore: number | null = null;
+  if (todayCheckin) {
+    const c = todayCheckin as Record<string, number>;
+    const vals = [
+      c.sleep_quality,
+      c.morning_energy,
+      c.stress_level   ? (6 - c.stress_level)  : null,  // invert: 1(calm)=5pts, 5(maxed)=1pt
+      c.soreness       ? (6 - c.soreness)       : null,  // invert: 1(none)=5pts, 5(wrecked)=1pt
+      c.motivation,
+    ].filter((v): v is number => v != null && v > 0);
+    if (vals.length > 0) readinessScore = vals.reduce((a, b) => a + b, 0) / vals.length;
+  }
+
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - now.getDay() + 1);
+  monday.setHours(0, 0, 0, 0);
+
+  const sessionsThisWeek = (recentSessions ?? []).filter((s) => new Date(s.completed_at!) >= monday);
+
+  // Today's session card content, driven by the client's own programme.
+  const activeBlockKeys = prog ? blockSessionKeys(prog, currentWeek) : new Set<string>();
+  const blockDoneThisWeek = sessionsThisWeek.filter((s) => activeBlockKeys.has(s.session_type)).length;
+  const sessionHref = todayLift && todayPlan?.sessionKey ? `/train/${todayPlan.sessionKey}?week=${currentWeek}` : "/train";
+  const sessionTitle = todayLift ? todayLift.name : todayPlan?.type === "rest" ? "Recovery day" : "Today's movement";
+  const sessionMeta = todayLift
+    ? `${todayLift.exercises.length} exercises`
+    : todayPlan?.type === "rest"
+      ? "Evening walk · keep the streak"
+      : "Treadmill + evening walk";
+
+  const coachNote = lastMessage?.[0]?.content ?? null;
+  // "Week done" only applies when there are lifting targets this week and they're all met.
+  const weekDone = activeBlockKeys.size > 0 && blockDoneThisWeek >= activeBlockKeys.size;
 
   return (
-    <div className="bg-edge-surface rounded-xl p-4 border-l-4 border-edge-gold mb-6 border-t border-r border-b border-white/[0.08]">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-8 h-8 rounded-full bg-edge-gold flex items-center justify-center flex-shrink-0">
-          <span className="font-condensed font-black text-xs text-edge-bg tracking-wider">E</span>
+    <div className="max-w-lg mx-auto bg-edge-bg min-h-screen">
+
+      {/* Header */}
+      <div className="flex items-start justify-between px-5 pt-safe" style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 16px)" }}>
+        <div className="pt-2">
+          <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 28, fontWeight: 400, color: "#F2F1ED", lineHeight: 1.1 }}>
+            {getGreeting()}, {firstName}.
+          </p>
+          <p style={{ fontSize: 12, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginTop: 4 }}>
+            {getDateLine()} · Week {currentWeek}, Day {currentDay}
+          </p>
         </div>
-        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold">
-          Edge
-        </p>
+        <div className="flex items-center gap-2 mt-2">
+          <Link href="/guide">
+            <div style={{ height: 36, borderRadius: 18, background: "#171B21", border: "1px solid #252A32", display: "flex", alignItems: "center", justifyContent: "center", paddingLeft: 12, paddingRight: 12, gap: 5 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 13, height: 13, color: "#C8965A" }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+              </svg>
+              <span style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: "Inter, sans-serif" }}>Guide</span>
+            </div>
+          </Link>
+          <Link href="/profile">
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#171B21", border: "1px solid #252A32", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 16, height: 16, color: "#9BA3AF" }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+          </Link>
+        </div>
       </div>
-      <p className="text-white/90 font-body text-sm leading-relaxed">
-        {lastMessage ?? "Tap Edge below to start your first conversation."}
-      </p>
+
+      <div className="px-5 space-y-3 pb-10 mt-5">
+
+        {/* Welcome card — shown on first day before any sessions */}
+        {currentDay === 1 && sessionsThisWeek.length === 0 && (
+          <div className="anim-0" style={{ background: "#171B21", borderRadius: 20, border: "1px solid rgba(200,150,90,0.3)", padding: "20px", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 2.5, background: "#C8965A", borderRadius: "20px 0 0 20px" }} />
+            <div style={{ paddingLeft: 14 }}>
+              <p style={{ fontSize: 9, color: "#C8965A", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 10 }}>
+                From Nick · Welcome
+              </p>
+              <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 20, fontWeight: 400, color: "#F2F1ED", lineHeight: 1.35, marginBottom: 10 }}>
+                Right, {firstName}. This is your programme. Built around you.
+              </p>
+              <p style={{ fontSize: 13, color: "rgba(242,241,237,0.6)", fontFamily: "Inter, sans-serif", lineHeight: 1.6, marginBottom: 16 }}>
+                {prog?.summary ?? "Your programme is built around you. Show up, follow the plan, and let the wins stack up."}
+              </p>
+              <Link href="/guide" style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                <span style={{ fontSize: 11, color: "#C8965A", fontFamily: "Inter, sans-serif", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.15em" }}>How the app works</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 12, height: 12, color: "#C8965A" }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Readiness + coach note row */}
+        <div className="anim-0" style={{ display: "flex", gap: 12 }}>
+
+          {/* Readiness card */}
+          <Link href="/checkin" className="pressable" style={{ flex: 1, textDecoration: "none" }}>
+            <div style={{ background: "#171B21", borderRadius: 20, border: "1px solid #252A32", padding: "16px 12px", display: "flex", flexDirection: "column", alignItems: "center", minHeight: 120, justifyContent: "center" }}>
+              {readinessScore !== null ? (
+                <ReadinessRing score={readinessScore} />
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: "50%", border: "2px dashed #252A32", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: "#C8965A", fontSize: 18 }}>+</span>
+                  </div>
+                  <span style={{ fontSize: 10, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.12em", fontFamily: "Inter, sans-serif", textAlign: "center", lineHeight: 1.4 }}>
+                    Log<br />readiness
+                  </span>
+                </div>
+              )}
+            </div>
+          </Link>
+
+          {/* Nick coach note or progress */}
+          <div style={{ flex: 2 }}>
+            {coachNote ? (
+              <div style={{ background: "#171B21", borderRadius: 20, border: "1px solid #252A32", padding: "16px", height: "100%", minHeight: 120, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#252A32", border: "1px solid #C8965A33", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 11, color: "#C8965A", fontWeight: 400 }}>N</span>
+                  </div>
+                  <span style={{ fontSize: 9, color: "#C8965A", textTransform: "uppercase", letterSpacing: "0.15em", fontFamily: "Inter, sans-serif" }}>Nick</span>
+                </div>
+                <p style={{ fontSize: 12, color: "rgba(242,241,237,0.7)", fontFamily: "Inter, sans-serif", lineHeight: 1.5, flex: 1 }}>
+                  {coachNote.length > 100 ? coachNote.slice(0, 100) + "…" : coachNote}
+                </p>
+              </div>
+            ) : (
+              <div style={{ background: "#171B21", borderRadius: 20, border: "1px solid #252A32", padding: "16px", height: "100%", minHeight: 120, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.15em", fontFamily: "Inter, sans-serif", marginBottom: 8 }}>This week</p>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} style={{ flex: 1, height: 3, borderRadius: 99, background: i < sessionsThisWeek.length ? "#C8965A" : "#252A32" }} />
+                  ))}
+                </div>
+                <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 22, color: "#F2F1ED", fontWeight: 400, lineHeight: 1 }}>
+                  {sessionsThisWeek.length}<span style={{ fontSize: 13, color: "#9BA3AF", fontFamily: "Inter, sans-serif", fontWeight: 400, marginLeft: 4 }}>of 3</span>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Today's training — full-bleed photo card */}
+        <div className="anim-1">
+          {!weekDone ? (
+            <Link href={sessionHref} className="block pressable">
+              <div style={{ position: "relative", overflow: "hidden", borderRadius: 20, minHeight: 200 }}>
+                <div style={{ position: "absolute", inset: 0, background: "#171B21" }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, #0E1014 0%, rgba(14,16,20,0.75) 50%, rgba(14,16,20,0.3) 100%)" }} />
+                <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 2.5, background: "#C8965A", borderRadius: "20px 0 0 20px" }} />
+                <div style={{ position: "relative", zIndex: 10, padding: "20px 20px 20px 24px", minHeight: 200, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 9, color: "#C8965A", textTransform: "uppercase", letterSpacing: "0.25em", fontFamily: "Inter, sans-serif" }}>
+                      Today&apos;s session
+                    </span>
+                    <div style={{ flex: 1, height: 1, background: "rgba(200,150,90,0.2)" }} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 40, fontWeight: 400, color: "#F2F1ED", lineHeight: 1, marginBottom: 6, letterSpacing: "-0.01em" }}>
+                      {sessionTitle}
+                    </h2>
+                    <p style={{ fontSize: 12, color: "rgba(242,241,237,0.45)", fontFamily: "Inter, sans-serif", marginBottom: 16 }}>
+                      {sessionMeta}
+                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                      <span style={{ fontSize: 11, color: "#F2F1ED", fontFamily: "Inter, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.15em" }}>
+                        Begin
+                      </span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 14, height: 14, color: "#C8965A" }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <div style={{ background: "#171B21", borderRadius: 20, border: "1px solid #252A32", padding: "24px 20px" }}>
+              <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.15em", fontFamily: "Inter, sans-serif", marginBottom: 8 }}>This week</p>
+              <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 28, color: "#F2F1ED", fontWeight: 400 }}>Three sessions done.</p>
+              <p style={{ fontSize: 13, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginTop: 4 }}>Rest. Come back Monday.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Today's mind lesson */}
+        {todayLesson && (
+          <div className="anim-2">
+            <Link href={`/mind/${lessonDay}`} className="block pressable">
+              <div style={{ background: "#171B21", borderRadius: 20, border: "1px solid #252A32", padding: "20px", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 2.5, background: "rgba(200,150,90,0.4)", borderRadius: "20px 0 0 20px" }} />
+                <div style={{ paddingLeft: 16 }}>
+                  <p style={{ fontSize: 9, color: "#C8965A", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 8 }}>
+                    Mind · Day {lessonDay}
+                  </p>
+                  <h3 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 22, fontWeight: 400, color: "#F2F1ED", lineHeight: 1.2, marginBottom: 4 }}>
+                    {todayLesson.title}
+                  </h3>
+                  <p style={{ fontSize: 11, color: "#9BA3AF", fontFamily: "Inter, sans-serif" }}>
+                    5–8 min read
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                    <span style={{ fontSize: 10, color: "#F2F1ED", fontFamily: "Inter, sans-serif", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.15em" }}>Read</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} style={{ width: 12, height: 12, color: "#C8965A" }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
+
+        {/* Daily check-in */}
+        <div className="anim-3">
+          <Link href="/checkin" className="block pressable">
+            <div style={{
+              background: todayCheckin ? "rgba(52,211,153,0.06)" : "#171B21",
+              borderRadius: 20,
+              border: todayCheckin ? "1px solid rgba(52,211,153,0.15)" : "1px solid #252A32",
+              padding: "18px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+              <div>
+                <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase", letterSpacing: "0.15em", fontFamily: "Inter, sans-serif", marginBottom: 4 }}>
+                  Daily check-in
+                </p>
+                <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 20, color: todayCheckin ? "#34D399" : "#F2F1ED", fontWeight: 400 }}>
+                  {todayCheckin ? "Done for today." : "60 seconds. How are you?"}
+                </p>
+              </div>
+              {todayCheckin ? (
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(52,211,153,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 14, height: 14, color: "#34D399" }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 18, height: 18, color: "#9BA3AF" }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+            </div>
+          </Link>
+        </div>
+
+      </div>
     </div>
   );
 }

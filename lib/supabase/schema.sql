@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   injuries TEXT,
   days_per_week INTEGER DEFAULT 3,
   commitment_answer TEXT,
+  body_weight_kg DECIMAL(5,2),
+  protein_target INTEGER DEFAULT 160,
+  calorie_target INTEGER DEFAULT 2200,
   approved BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -185,4 +188,33 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER profiles_updated_at
   BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE PROCEDURE update_updated_at();
+
+-- =====================
+-- MIGRATION: Nutrition targets (run if upgrading from earlier schema)
+-- =====================
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS body_weight_kg DECIMAL(5,2);
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS protein_target INTEGER DEFAULT 160;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS calorie_target INTEGER DEFAULT 2200;
+
+-- =====================
+-- Per-client programmes (migration 0002)
+-- =====================
+CREATE TABLE IF NOT EXISTS client_programmes (
+  user_id    UUID REFERENCES profiles(id) ON DELETE CASCADE PRIMARY KEY,
+  programme  JSONB NOT NULL,
+  sessions   JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE client_programmes ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can read own programme" ON client_programmes;
+CREATE POLICY "Users can read own programme"
+  ON client_programmes FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP TRIGGER IF EXISTS client_programmes_updated_at ON client_programmes;
+CREATE TRIGGER client_programmes_updated_at
+  BEFORE UPDATE ON client_programmes
   FOR EACH ROW EXECUTE PROCEDURE update_updated_at();

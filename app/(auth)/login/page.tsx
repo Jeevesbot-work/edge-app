@@ -1,190 +1,149 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [mode, setMode] = useState<"password" | "magic">("password");
-  const [magicSent, setMagicSent] = useState(false);
+const B = "#C8965A";
+const BG = "#0E1014";
+const SURFACE = "#171B21";
+const BORDER = "#252A32";
 
-  async function handlePasswordLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError(error.message);
-      } else {
-        router.push("/");
-        return;
-      }
-    } catch (err) {
-      setError("Unable to connect. Check your internet connection.");
-      console.error(err);
-    }
-    setLoading(false);
+export default function LoginPage() {
+  return <Suspense><LoginForm /></Suspense>;
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const linkExpired = searchParams.get("error") === "expired";
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function signInWithGoogle() {
+    setGoogleLoading(true);
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
   }
 
-  async function handleMagicLink(e: React.FormEvent) {
+  async function sendLink(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        setMagicSent(true);
-      }
-    } catch (err) {
-      setError("Unable to connect. Check your internet connection.");
-      console.error(err);
-    }
+
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
     setLoading(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Something went wrong. Try again.");
+    } else {
+      setSent(true);
+    }
   }
 
   return (
-    <div className="min-h-screen bg-edge-bg flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-edge-red mb-6">
-            <span className="font-condensed font-black text-2xl text-white tracking-wider">B2S</span>
+    <div style={{ minHeight: "100svh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+      <div style={{ width: "100%", maxWidth: 360 }}>
+
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(200,150,90,0.1)", border: "1px solid rgba(200,150,90,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 22, color: B, fontWeight: 400 }}>B</span>
           </div>
-          <h1 className="font-condensed font-black text-4xl text-white tracking-wide uppercase">
-            Back2Strong
-          </h1>
-          <p className="text-edge-muted text-sm mt-2 font-body">
-            Your daily performance coach.
-          </p>
+          <h1 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 28, color: "#F2F1ED", fontWeight: 400, marginBottom: 6 }}>Back2Strong</h1>
+          <p style={{ fontSize: 12, color: "#9BA3AF", fontFamily: "Inter, sans-serif" }}>Enter your email to get in</p>
         </div>
 
-        {mode === "password" && (
-          <form onSubmit={handlePasswordLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs text-edge-muted uppercase tracking-widest mb-2 font-body">
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="your@email.com"
-                className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-base font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-red transition-colors"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-edge-muted uppercase tracking-widest mb-2 font-body">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-base font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-red transition-colors"
-              />
-            </div>
-
-            {error && <p className="text-edge-red text-sm font-body">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 transition-opacity active:scale-95"
-            >
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
-
-            <div className="flex items-center gap-3 my-2">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-edge-muted text-xs font-body">or</span>
-              <div className="flex-1 h-px bg-white/10" />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => { setMode("magic"); setError(""); }}
-              className="w-full border border-white/10 text-white/70 font-body text-sm py-3 rounded-xl active:bg-white/5 transition-colors"
-            >
-              Send magic link instead
-            </button>
-
-            <p className="text-center text-edge-muted text-xs font-body mt-4">
-              New here?{" "}
-              <Link href="/signup" className="text-white underline">
-                Create an account
-              </Link>
-            </p>
-          </form>
+        {linkExpired && (
+          <div style={{ background: "rgba(200,150,90,0.08)", border: "1px solid rgba(200,150,90,0.25)", borderRadius: 14, padding: "14px 16px", marginBottom: 24, textAlign: "center" }}>
+            <p style={{ color: B, fontSize: 13, fontFamily: "Inter, sans-serif", fontWeight: 600, marginBottom: 4 }}>Your link expired</p>
+            <p style={{ color: "#9BA3AF", fontSize: 12, fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}>Enter your email below and we'll send a fresh one now.</p>
+          </div>
         )}
 
-        {mode === "magic" && !magicSent && (
-          <form onSubmit={handleMagicLink} className="space-y-4">
-            <div>
-              <label className="block text-xs text-edge-muted uppercase tracking-widest mb-2 font-body">
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="your@email.com"
-                className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-base font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-red transition-colors"
-              />
-            </div>
-
-            {error && <p className="text-edge-red text-sm font-body">{error}</p>}
-
+        {!sent ? (
+          <form onSubmit={sendLink}>
+            <p style={{ fontSize: 9, color: "#9BA3AF", textTransform: "uppercase" as const, letterSpacing: "0.2em", fontFamily: "Inter, sans-serif", marginBottom: 8 }}>Email address</p>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoFocus
+              placeholder="your@email.com"
+              style={{ width: "100%", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px", color: "#F2F1ED", fontFamily: "Inter, sans-serif", fontSize: 16, outline: "none", marginBottom: 16, boxSizing: "border-box" as const }}
+            />
+            {error && <p style={{ color: "#E8291C", fontSize: 13, fontFamily: "Inter, sans-serif", marginBottom: 12 }}>{error}</p>}
             <button
               type="submit"
               disabled={loading || !email}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 transition-opacity active:scale-95"
+              style={{ width: "100%", background: !email || loading ? BORDER : B, color: !email || loading ? "#9BA3AF" : BG, fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 13, textTransform: "uppercase" as const, letterSpacing: "0.15em", padding: "15px", borderRadius: 14, border: "none", cursor: !email ? "default" : "pointer", marginBottom: 16, transition: "background 0.15s" }}
             >
-              {loading ? "Sending..." : "Get Access Link"}
+              {loading ? "Sending..." : "Send magic link →"}
             </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "4px 0 16px" }}>
+              <div style={{ flex: 1, height: 1, background: BORDER }} />
+              <span style={{ color: "#9BA3AF", fontSize: 11, fontFamily: "Inter, sans-serif" }}>or</span>
+              <div style={{ flex: 1, height: 1, background: BORDER }} />
+            </div>
 
             <button
               type="button"
-              onClick={() => { setMode("password"); setError(""); }}
-              className="w-full text-edge-muted text-sm font-body py-2"
+              onClick={signInWithGoogle}
+              disabled={googleLoading}
+              style={{ width: "100%", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "13px 16px", color: "#F2F1ED", fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 16, opacity: googleLoading ? 0.6 : 1 }}
             >
-              ← Back to password login
+              <svg viewBox="0 0 24 24" style={{ width: 18, height: 18 }} xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              {googleLoading ? "Redirecting..." : "Continue with Google"}
             </button>
           </form>
-        )}
-
-        {mode === "magic" && magicSent && (
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        ) : (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(200,150,90,0.1)", border: "1px solid rgba(200,150,90,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#C8965A" strokeWidth={1.5} style={{ width: 28, height: 28 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
               </svg>
             </div>
-            <h2 className="font-condensed font-bold text-2xl uppercase tracking-wide">Check your email</h2>
-            <p className="text-edge-muted text-sm font-body leading-relaxed">
-              We've sent a link to <span className="text-white">{email}</span>. Tap it to access your account.
+            <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 24, color: "#F2F1ED", fontWeight: 400, marginBottom: 12 }}>Check your email</p>
+            <p style={{ fontSize: 14, color: "#9BA3AF", fontFamily: "Inter, sans-serif", lineHeight: 1.6, marginBottom: 8 }}>
+              We sent a sign-in link to<br />
+              <span style={{ color: "#F2F1ED" }}>{email}</span>
             </p>
-            <button onClick={() => { setMagicSent(false); setMode("password"); }} className="text-edge-muted text-xs underline">
-              Back to sign in
+            <p style={{ fontSize: 13, color: "#9BA3AF", fontFamily: "Inter, sans-serif", lineHeight: 1.6, marginBottom: 32 }}>
+              Tap it to get in. The link is valid for <span style={{ color: "#F2F1ED" }}>2 hours</span> — if it expires, just come back here and enter your email again for a new one.
+            </p>
+            <button
+              type="button"
+              onClick={() => setSent(false)}
+              style={{ width: "100%", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "13px", color: "#9BA3AF", fontFamily: "Inter, sans-serif", fontSize: 12, textTransform: "uppercase" as const, letterSpacing: "0.15em", cursor: "pointer", marginBottom: 12 }}
+            >
+              Resend link
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSent(false); setEmail(""); }}
+              style={{ background: "none", border: "none", color: "#9BA3AF", fontSize: 12, fontFamily: "Inter, sans-serif", cursor: "pointer" }}
+            >
+              ← Use a different email
             </button>
           </div>
         )}
+
       </div>
     </div>
   );

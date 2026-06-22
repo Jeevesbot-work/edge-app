@@ -34,6 +34,20 @@ export default async function AdminPage() {
         </div>
       </div>
 
+      <Link href="/admin/add-client">
+        <div className="bg-edge-bronze/10 border border-edge-bronze/30 rounded-xl p-4 flex items-center gap-4 mb-8 active:bg-edge-bronze/20 transition-colors">
+          <div className="w-10 h-10 rounded-full bg-edge-bronze/20 flex items-center justify-center flex-shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#C8965A" strokeWidth={2} className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-condensed font-bold text-sm text-white uppercase tracking-wide">Add New Client</p>
+            <p className="text-edge-muted text-xs">Create profile, set programme, send access link</p>
+          </div>
+        </div>
+      </Link>
+
       {/* Pending approval */}
       {pending.length > 0 && (
         <div className="mb-8">

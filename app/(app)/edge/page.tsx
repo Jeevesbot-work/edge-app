@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const SUGGESTED = [
-  "My lower back is tight today, what should I do?",
-  "I've missed three sessions — am I screwed?",
+  "My lower back is tight today — what do I do?",
+  "I've missed three sessions. Am I screwed?",
   "What should I eat before training?",
-  "I'm travelling this week — what's my hotel workout?",
+  "I'm travelling this week — hotel workout?",
 ];
 
 interface Message {
@@ -25,9 +25,7 @@ export default function EdgePage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    loadMessages();
-  }, []);
+  useEffect(() => { loadMessages(); }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -72,7 +70,6 @@ export default function EdgePage() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let full = "";
-
       setStreaming(" ");
 
       while (true) {
@@ -83,14 +80,12 @@ export default function EdgePage() {
       }
 
       setStreaming("");
-
-      const tempAssistant: Message = {
+      setMessages((prev) => [...prev, {
         id: `temp-a-${Date.now()}`,
         role: "assistant",
         content: full,
         created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, tempAssistant]);
+      }]);
     } catch {
       setStreaming("");
     } finally {
@@ -99,43 +94,48 @@ export default function EdgePage() {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   }
 
   const isEmpty = messages.length === 0 && !streaming;
 
   return (
-    <div className="flex flex-col h-screen bg-edge-bg max-w-lg mx-auto">
+    <div style={{ display: "flex", flexDirection: "column", height: "100svh", background: "#0E1014", maxWidth: 512, margin: "0 auto" }}>
+
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-white/[0.08] pt-safe flex-shrink-0">
-        <div className="w-9 h-9 rounded-full bg-edge-gold flex items-center justify-center">
-          <span className="font-condensed font-black text-sm text-edge-bg">E</span>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12, padding: "16px 20px",
+        borderBottom: "1px solid #252A32", flexShrink: 0,
+        paddingTop: "max(env(safe-area-inset-top, 0px), 16px)"
+      }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(200,150,90,0.12)", border: "1px solid rgba(200,150,90,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 16, color: "#C8965A", fontWeight: 400 }}>N</span>
         </div>
         <div>
-          <h1 className="font-condensed font-bold text-lg uppercase tracking-wide leading-none">Edge</h1>
-          <p className="text-edge-muted text-xs">Your performance coach</p>
+          <h1 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 18, color: "#F2F1ED", fontWeight: 400, lineHeight: 1 }}>Edge Coach</h1>
+          <p style={{ fontSize: 10, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginTop: 2 }}>Your personal performance coach</p>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 16 }}>
         {isEmpty && (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 rounded-full bg-edge-gold/20 flex items-center justify-center mx-auto mb-4">
-              <span className="font-condensed font-black text-2xl text-edge-gold">E</span>
+          <div style={{ textAlign: "center", paddingTop: 32 }}>
+            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(200,150,90,0.08)", border: "1px solid rgba(200,150,90,0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 28, color: "#C8965A", fontWeight: 400 }}>N</span>
             </div>
-            <p className="text-white/70 font-body text-sm leading-relaxed mb-6 max-w-xs mx-auto">
-              Ask me anything. Training, recovery, nutrition, mindset — or just tell me what's going on.
+            <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 20, color: "#F2F1ED", fontWeight: 400, marginBottom: 8 }}>
+              What&apos;s on your mind?
             </p>
-            <div className="space-y-2">
+            <p style={{ fontSize: 13, color: "#9BA3AF", fontFamily: "Inter, sans-serif", lineHeight: 1.5, maxWidth: 260, margin: "0 auto 28px" }}>
+              Training, recovery, nutrition, mindset — or just tell me what&apos;s going on.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {SUGGESTED.map((s) => (
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="w-full text-left bg-edge-surface border border-white/10 rounded-xl px-4 py-3 text-white/70 text-sm font-body active:bg-white/5"
+                  style={{ width: "100%", textAlign: "left", background: "#171B21", border: "1px solid #252A32", borderRadius: 14, padding: "12px 16px", color: "rgba(242,241,237,0.6)", fontSize: 13, fontFamily: "Inter, sans-serif", cursor: "pointer" }}
                 >
                   {s}
                 </button>
@@ -145,39 +145,41 @@ export default function EdgePage() {
         )}
 
         {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start gap-2"}`}>
+          <div key={m.id} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", gap: 10 }}>
             {m.role === "assistant" && (
-              <div className="w-7 h-7 rounded-full bg-edge-gold flex items-center justify-center flex-shrink-0 mt-1">
-                <span className="font-condensed font-black text-xs text-edge-bg">E</span>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(200,150,90,0.1)", border: "1px solid rgba(200,150,90,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 12, color: "#C8965A" }}>N</span>
               </div>
             )}
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm font-body leading-relaxed ${
-                m.role === "user"
-                  ? "bg-edge-red text-white rounded-tr-sm"
-                  : "bg-edge-surface text-white/90 rounded-tl-sm border border-white/[0.08]"
-              }`}
-            >
+            <div style={{
+              maxWidth: "78%",
+              borderRadius: m.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+              padding: "12px 16px",
+              fontSize: 14,
+              fontFamily: "Inter, sans-serif",
+              lineHeight: 1.55,
+              background: m.role === "user" ? "#252A32" : "#171B21",
+              color: m.role === "user" ? "#F2F1ED" : "rgba(242,241,237,0.85)",
+              border: m.role === "assistant" ? "1px solid #252A32" : "none",
+            }}>
               {m.content}
             </div>
           </div>
         ))}
 
         {streaming && (
-          <div className="flex justify-start gap-2">
-            <div className="w-7 h-7 rounded-full bg-edge-gold flex items-center justify-center flex-shrink-0 mt-1">
-              <span className="font-condensed font-black text-xs text-edge-bg">E</span>
+          <div style={{ display: "flex", justifyContent: "flex-start", gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(200,150,90,0.1)", border: "1px solid rgba(200,150,90,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+              <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 12, color: "#C8965A" }}>N</span>
             </div>
-            <div className="max-w-[80%] rounded-2xl rounded-tl-sm px-4 py-3 text-sm font-body leading-relaxed bg-edge-surface text-white/90 border border-white/[0.08]">
+            <div style={{ maxWidth: "78%", borderRadius: "18px 18px 18px 4px", padding: "12px 16px", fontSize: 14, fontFamily: "Inter, sans-serif", lineHeight: 1.55, background: "#171B21", color: "rgba(242,241,237,0.85)", border: "1px solid #252A32" }}>
               {streaming === " " ? (
-                <div className="flex gap-1 items-center h-4">
+                <div style={{ display: "flex", gap: 4, alignItems: "center", height: 20 }}>
                   {[0, 1, 2].map((i) => (
-                    <div key={i} className="typing-dot w-1.5 h-1.5 rounded-full bg-edge-gold" />
+                    <div key={i} className="typing-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#C8965A" }} />
                   ))}
                 </div>
-              ) : (
-                streaming
-              )}
+              ) : streaming}
             </div>
           </div>
         )}
@@ -186,24 +188,23 @@ export default function EdgePage() {
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-white/[0.08] bg-edge-surface flex-shrink-0 pb-safe">
-        <div className="flex items-end gap-2">
+      <div style={{ padding: "12px 16px", borderTop: "1px solid #252A32", background: "#0E1014", flexShrink: 0, paddingBottom: "max(env(safe-area-inset-bottom, 0px), 80px)" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Edge..."
+            placeholder="Ask your coach..."
             rows={1}
-            className="flex-1 bg-edge-bg border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-red resize-none max-h-32"
-            style={{ minHeight: "46px" }}
+            style={{ flex: 1, background: "#171B21", border: "1px solid #252A32", borderRadius: 16, padding: "12px 16px", color: "#F2F1ED", fontSize: 14, fontFamily: "Inter, sans-serif", outline: "none", resize: "none", minHeight: 46, maxHeight: 120 }}
           />
           <button
             onClick={() => send()}
             disabled={!input.trim() || loading}
-            className="w-11 h-11 rounded-xl bg-edge-red flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform flex-shrink-0"
+            style={{ width: 46, height: 46, borderRadius: 14, background: input.trim() && !loading ? "#C8965A" : "#252A32", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "background 0.15s" }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-5 h-5 text-white">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ width: 18, height: 18, color: input.trim() && !loading ? "#0E1014" : "#3D434D" }}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7" />
             </svg>
           </button>

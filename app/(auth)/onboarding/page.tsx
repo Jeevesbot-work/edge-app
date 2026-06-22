@@ -32,6 +32,9 @@ export default function OnboardingPage() {
     injuries: "",
     days_per_week: 3,
     commitment_answer: "",
+    body_weight_kg: "",
+    protein_target: 0,
+    calorie_target: 0,
   });
 
   const steps = [
@@ -40,10 +43,27 @@ export default function OnboardingPage() {
     "goal",
     "state",
     "injuries",
+    "nutrition",
     "availability",
     "commitment",
     "ready",
   ];
+
+  // Auto-calculate targets when weight changes — calorie multiplier adjusts to goal
+  function setWeight(kg: string) {
+    const w = parseFloat(kg);
+    if (!isNaN(w) && w > 0) {
+      const calorieMultiplier = data.goal === "fat" ? 28 : data.goal === "stronger" ? 36 : 33;
+      setData((d) => ({
+        ...d,
+        body_weight_kg: kg,
+        protein_target: Math.round(w * 2),
+        calorie_target: Math.round(w * calorieMultiplier),
+      }));
+    } else {
+      setData((d) => ({ ...d, body_weight_kg: kg, protein_target: 0, calorie_target: 0 }));
+    }
+  }
 
   const current = steps[step];
   const progress = step / (steps.length - 1);
@@ -66,7 +86,13 @@ export default function OnboardingPage() {
       commitment_answer: data.commitment_answer,
     });
 
-    router.push("/pending");
+    await supabase.from("programme_state").upsert({
+      user_id: user.id,
+      current_day: 1,
+      current_week: 1,
+    }, { onConflict: "user_id" });
+
+    router.push("/home");
   }
 
   function next() {
@@ -79,7 +105,7 @@ export default function OnboardingPage() {
       {step > 0 && step < steps.length - 1 && (
         <div className="h-1 bg-white/10">
           <div
-            className="h-full bg-edge-red transition-all duration-500"
+            className="h-full bg-edge-bronze transition-all duration-500"
             style={{ width: `${progress * 100}%` }}
           />
         </div>
@@ -102,7 +128,7 @@ export default function OnboardingPage() {
             </div>
             <button
               onClick={next}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95 transition-transform"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95 transition-transform"
             >
               Let's go
             </button>
@@ -121,7 +147,7 @@ export default function OnboardingPage() {
               onChange={(e) => setData({ ...data, full_name: e.target.value })}
               placeholder="Your name"
               autoFocus
-              className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-lg font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-red mb-4"
+              className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-lg font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-bronze mb-4"
             />
             <input
               type="number"
@@ -130,12 +156,12 @@ export default function OnboardingPage() {
               placeholder="Your age"
               min={30}
               max={80}
-              className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-lg font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-red mb-8"
+              className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-lg font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-bronze mb-8"
             />
             <button
               onClick={next}
               disabled={!data.full_name}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95 transition-transform"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95 transition-transform"
             >
               Next
             </button>
@@ -155,7 +181,7 @@ export default function OnboardingPage() {
                   onClick={() => setData({ ...data, goal: g.value })}
                   className={`w-full text-left px-5 py-4 rounded-xl border font-body text-base transition-all ${
                     data.goal === g.value
-                      ? "border-edge-red bg-edge-red/10 text-white"
+                      ? "border-edge-bronze bg-edge-bronze/10 text-white"
                       : "border-white/10 bg-edge-surface text-white/80"
                   }`}
                 >
@@ -166,7 +192,7 @@ export default function OnboardingPage() {
             <button
               onClick={next}
               disabled={!data.goal}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 mt-6 active:scale-95"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 mt-6 active:scale-95"
             >
               Next
             </button>
@@ -186,7 +212,7 @@ export default function OnboardingPage() {
                   onClick={() => setData({ ...data, training_state: s.value })}
                   className={`w-full text-left px-5 py-4 rounded-xl border font-body text-base transition-all ${
                     data.training_state === s.value
-                      ? "border-edge-red bg-edge-red/10 text-white"
+                      ? "border-edge-bronze bg-edge-bronze/10 text-white"
                       : "border-white/10 bg-edge-surface text-white/80"
                   }`}
                 >
@@ -197,7 +223,7 @@ export default function OnboardingPage() {
             <button
               onClick={next}
               disabled={!data.training_state}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 mt-6 active:scale-95"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 mt-6 active:scale-95"
             >
               Next
             </button>
@@ -215,13 +241,70 @@ export default function OnboardingPage() {
               onChange={(e) => setData({ ...data, injuries: e.target.value })}
               placeholder="Lower back issues, old knee injury... or leave blank if none"
               rows={4}
-              className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-red resize-none mb-8"
+              className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-bronze resize-none mb-8"
             />
             <button
               onClick={next}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95"
             >
               {data.injuries ? "Next" : "No injuries, next"}
+            </button>
+          </div>
+        )}
+
+        {current === "nutrition" && (
+          <div className="flex-1 flex flex-col justify-center">
+            <h2 className="font-condensed font-bold text-3xl uppercase tracking-wide mb-2">
+              What&apos;s your current body weight?
+            </h2>
+            <p className="text-edge-muted text-sm mb-2">
+              We use this to calculate your protein and calorie targets.
+            </p>
+            <p className="text-white/50 text-xs font-body mb-8 leading-relaxed">
+              At 40+ protein is non-negotiable — muscle doesn&apos;t hold itself. 2g per kg keeps you building, not breaking down.
+            </p>
+            <div className="flex items-center gap-3 mb-6">
+              <input
+                type="number"
+                value={data.body_weight_kg}
+                onChange={(e) => setWeight(e.target.value)}
+                placeholder="e.g. 85"
+                min={50}
+                max={200}
+                className="flex-1 bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white text-2xl font-condensed placeholder:text-edge-muted focus:outline-none focus:border-edge-bronze"
+              />
+              <span className="text-white/40 text-lg font-body">kg</span>
+            </div>
+            {data.protein_target > 0 && (
+              <div className="bg-edge-surface rounded-xl border border-edge-bronze/20 p-5 mb-8">
+                <p className="text-edge-bronze text-xs uppercase tracking-widest font-condensed font-bold mb-4">Your targets</p>
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <p className="text-white/50 text-xs font-body uppercase tracking-widest mb-1">Protein</p>
+                    <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 32, color: "#F2F1ED", fontWeight: 400, lineHeight: 1 }}>
+                      {data.protein_target}<span style={{ fontSize: 16, color: "#9BA3AF", marginLeft: 4 }}>g/day</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white/50 text-xs font-body uppercase tracking-widest mb-1">
+                      {data.goal === "fat" ? "Deficit" : data.goal === "stronger" ? "Surplus" : "Maintenance"}
+                    </p>
+                    <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 32, color: "#F2F1ED", fontWeight: 400, lineHeight: 1 }}>
+                      {data.calorie_target}<span style={{ fontSize: 16, color: "#9BA3AF", marginLeft: 4 }}>kcal</span>
+                    </p>
+                  </div>
+                </div>
+                <p className="text-edge-muted text-xs font-body pt-3 border-t border-white/10">
+                  Based on {data.body_weight_kg}kg.{data.goal === "fat" ? " Calorie target is set slightly below maintenance for fat loss." : data.goal === "stronger" ? " Calorie target includes a small surplus for muscle building." : ""} Adjust anytime in your profile.
+                </p>
+              </div>
+            )}
+            <button
+              onClick={next}
+              disabled={!data.body_weight_kg}
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95"
+            >
+              {data.body_weight_kg ? "Set my targets" : "Enter your weight"}
             </button>
           </div>
         )}
@@ -241,7 +324,7 @@ export default function OnboardingPage() {
                   onClick={() => setData({ ...data, days_per_week: n })}
                   className={`flex-1 py-6 rounded-xl border font-condensed font-black text-3xl transition-all ${
                     data.days_per_week === n
-                      ? "border-edge-red bg-edge-red/10 text-white"
+                      ? "border-edge-bronze bg-edge-bronze/10 text-white"
                       : "border-white/10 bg-edge-surface text-white/60"
                   }`}
                 >
@@ -258,7 +341,7 @@ export default function OnboardingPage() {
             </p>
             <button
               onClick={next}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95"
             >
               Next
             </button>
@@ -283,7 +366,7 @@ export default function OnboardingPage() {
                   onClick={() => setData({ ...data, commitment_answer: opt.value })}
                   className={`w-full text-left px-5 py-4 rounded-xl border font-body text-base transition-all ${
                     data.commitment_answer === opt.value
-                      ? "border-edge-red bg-edge-red/10 text-white"
+                      ? "border-edge-bronze bg-edge-bronze/10 text-white"
                       : "border-white/10 bg-edge-surface text-white/80"
                   }`}
                 >
@@ -294,7 +377,7 @@ export default function OnboardingPage() {
             <button
               onClick={next}
               disabled={!data.commitment_answer}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95"
             >
               Next
             </button>
@@ -319,7 +402,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleComplete}
               disabled={loading}
-              className="w-full bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95"
+              className="w-full bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95"
             >
               {loading ? "Saving..." : "Submit Application"}
             </button>
