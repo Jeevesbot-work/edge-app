@@ -112,7 +112,7 @@ export default async function ProgressPage() {
         </div>
         <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08]">
           <p className="text-edge-muted text-xs uppercase tracking-widest font-condensed mb-2">Consistency</p>
-          <p className="font-condensed font-black text-4xl" style={{ color: consistencyPct >= 80 ? "#10B981" : consistencyPct >= 60 ? "#F5A623" : "#E8291C" }}>
+          <p className="font-condensed font-black text-4xl" style={{ color: consistencyPct >= 80 ? "#10B981" : consistencyPct >= 60 ? "#F5A623" : "#F5A623" }}>
             {consistencyPct}%
           </p>
           <p className="text-edge-muted text-xs mt-1">Last 4 weeks</p>
@@ -135,7 +135,7 @@ export default async function ProgressPage() {
           <div className="flex items-center justify-between mb-3">
             <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted">Weight</p>
             {weightDelta != null && weightSeries.length > 1 && (
-              <span className="text-xs font-condensed" style={{ color: weightDelta < 0 ? "#10B981" : weightDelta > 0 ? "#E8291C" : "#9BA3AF" }}>
+              <span className="text-xs font-condensed" style={{ color: weightDelta < 0 ? "#10B981" : weightDelta > 0 ? "#F5A623" : "#9BA3AF" }}>
                 {weightDelta > 0 ? "+" : ""}{weightDelta} kg since start
               </span>
             )}
@@ -166,7 +166,7 @@ export default async function ProgressPage() {
             {energyPoints.map((e, i) => (
               <div key={i} className="flex-1 rounded-sm transition-all" style={{
                 height: `${(e / maxEnergy) * 100}%`,
-                backgroundColor: e >= 4 ? "#10B981" : e >= 3 ? "#F5A623" : "#E8291C",
+                backgroundColor: e >= 4 ? "#10B981" : e >= 3 ? "#F5A623" : "#F5A623",
                 opacity: 0.8,
               }} />
             ))}
@@ -203,7 +203,7 @@ export default async function ProgressPage() {
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <p style={{ fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 700, color: "#F2F1ED", lineHeight: 1 }}>{latest.weight}<span style={{ fontSize: 12, fontWeight: 400, color: "#9BA3AF" }}> kg</span></p>
                       {gain !== 0 && (
-                        <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: gain > 0 ? "#34D399" : "#E8291C", marginTop: 2 }}>
+                        <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: gain > 0 ? "#34D399" : "#F5A623", marginTop: 2 }}>
                           {gain > 0 ? "+" : ""}{gain}kg
                         </p>
                       )}

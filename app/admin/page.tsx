@@ -51,15 +51,15 @@ export default async function AdminPage() {
       {/* Pending approval */}
       {pending.length > 0 && (
         <div className="mb-8">
-          <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-red mb-3">
+          <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold mb-3">
             Pending Approval ({pending.length})
           </h2>
           <div className="space-y-2">
             {pending.map((p) => (
               <Link key={p.id} href={`/admin/users/${p.id}`}>
-                <div className="bg-edge-surface rounded-xl p-4 border border-edge-red/30 flex items-center gap-4 active:bg-white/5">
-                  <div className="w-10 h-10 rounded-full bg-edge-red/20 flex items-center justify-center flex-shrink-0">
-                    <span className="font-condensed font-bold text-sm text-edge-red">
+                <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/30 flex items-center gap-4 active:bg-white/5">
+                  <div className="w-10 h-10 rounded-full bg-edge-gold/20 flex items-center justify-center flex-shrink-0">
+                    <span className="font-condensed font-bold text-sm text-edge-gold">
                       {(p.full_name ?? p.email)[0].toUpperCase()}
                     </span>
                   </div>
@@ -70,7 +70,7 @@ export default async function AdminPage() {
                       Goal: {p.goal ?? "—"} · Age: {p.age ?? "—"}
                     </p>
                   </div>
-                  <span className="bg-edge-red/20 text-edge-red font-condensed text-xs uppercase px-2 py-1 rounded-lg flex-shrink-0">
+                  <span className="bg-edge-gold/20 text-edge-gold font-condensed text-xs uppercase px-2 py-1 rounded-lg flex-shrink-0">
                     Pending
                   </span>
                 </div>

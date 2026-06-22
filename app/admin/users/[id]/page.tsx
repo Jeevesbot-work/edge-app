@@ -124,8 +124,8 @@ export default async function AdminUserPage({ params }: { params: { id: string }
         </h2>
         <div className="space-y-2">
           {messages?.slice(0, 10).reverse().map((m) => (
-            <div key={m.id} className={`rounded-xl p-3 text-sm font-body ${m.role === "user" ? "bg-edge-red/10 border border-edge-red/20 text-white/80" : "bg-edge-surface border border-edge-gold/20 text-white/70"}`}>
-              <span className="text-xs uppercase font-condensed mr-2" style={{ color: m.role === "user" ? "#E8291C" : "#F5A623" }}>
+            <div key={m.id} className={`rounded-xl p-3 text-sm font-body ${m.role === "user" ? "bg-edge-gold/10 border border-edge-gold/20 text-white/80" : "bg-edge-surface border border-edge-gold/20 text-white/70"}`}>
+              <span className="text-xs uppercase font-condensed mr-2" style={{ color: m.role === "user" ? "#F5A623" : "#F5A623" }}>
                 {m.role === "user" ? "Member" : "Edge"}
               </span>
               {m.content}

@@ -65,7 +65,7 @@ export default function SleepPage() {
           </div>
           <div className="w-px bg-white/10" />
           <div className="text-center">
-            <p className="font-condensed font-black text-3xl" style={{ color: quality >= 7 ? "#10B981" : quality >= 5 ? "#F5A623" : "#E8291C" }}>{quality}/10</p>
+            <p className="font-condensed font-black text-3xl" style={{ color: quality >= 7 ? "#10B981" : quality >= 5 ? "#F5A623" : "#F5A623" }}>{quality}/10</p>
             <p className="text-edge-muted text-xs">Quality</p>
           </div>
         </div>

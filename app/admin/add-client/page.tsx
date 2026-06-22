@@ -263,7 +263,7 @@ export default function AddClientPage() {
         </div>
 
         {error && (
-          <p className="text-edge-red text-sm font-body text-center">{error}</p>
+          <p className="text-edge-gold text-sm font-body text-center">{error}</p>
         )}
 
         <button

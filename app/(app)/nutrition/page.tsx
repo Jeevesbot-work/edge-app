@@ -98,13 +98,13 @@ export default function NutritionPage() {
       </div>
 
       <div className="flex bg-edge-surface rounded-xl p-1 mb-6 border border-white/[0.08]">
-        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-sm uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-red text-white" : "text-edge-muted"}`}>Today</button>
-        <button onClick={() => setTab("cookbook")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-sm uppercase tracking-widest transition-all ${tab === "cookbook" ? "bg-edge-red text-white" : "text-edge-muted"}`}>Cookbook</button>
+        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-sm uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Today</button>
+        <button onClick={() => setTab("cookbook")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-sm uppercase tracking-widest transition-all ${tab === "cookbook" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Cookbook</button>
       </div>
 
       {tab === "today" && (
         <>
-          <button onClick={() => fileRef.current?.click()} disabled={analysing} className="w-full bg-edge-red rounded-2xl p-5 flex items-center gap-4 mb-6 active:scale-[0.98] transition-transform disabled:opacity-60">
+          <button onClick={() => fileRef.current?.click()} disabled={analysing} className="w-full bg-edge-gold rounded-2xl p-5 flex items-center gap-4 mb-6 active:scale-[0.98] transition-transform disabled:opacity-60">
             <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
               {analysing ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> : (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6 text-white">
@@ -132,7 +132,7 @@ export default function NutritionPage() {
             </div>
           )}
 
-          {error && <div className="mb-6 bg-edge-red/10 border border-edge-red/30 rounded-xl p-4"><p className="text-edge-red text-sm">{error}</p></div>}
+          {error && <div className="mb-6 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-4"><p className="text-edge-gold text-sm">{error}</p></div>}
 
           {latest && !analysing && (
             <div className="mb-6 bg-edge-surface rounded-2xl border border-edge-gold/30 overflow-hidden">
@@ -158,7 +158,7 @@ export default function NutritionPage() {
               <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Today's Totals</p>
               <div className="mb-4">
                 <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Protein</span><span className="text-edge-muted text-xs">{Math.round(totalProtein)}g / {PROTEIN_TARGET}g</span></div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${proteinPct}%`, backgroundColor: totalProtein >= PROTEIN_TARGET ? "#10B981" : "#E8291C" }} /></div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${proteinPct}%`, backgroundColor: totalProtein >= PROTEIN_TARGET ? "#10B981" : "#F5A623" }} /></div>
               </div>
               <div className="mb-4">
                 <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Calories</span><span className="text-edge-muted text-xs">{Math.round(totalCalories)} / {CALORIE_TARGET}</span></div>
@@ -186,7 +186,7 @@ export default function NutritionPage() {
                     </div>
                     <div className="flex gap-4">
                       <span className="text-edge-muted text-xs">{log.calories} cal</span>
-                      <span className="text-edge-red text-xs">{log.protein_g}g protein</span>
+                      <span className="text-edge-gold text-xs">{log.protein_g}g protein</span>
                       <span className="text-edge-muted text-xs">{log.carbs_g}g carbs</span>
                       <span className="text-edge-muted text-xs">{log.fat_g}g fat</span>
                     </div>
@@ -230,7 +230,7 @@ function RecipeSection({ title, recipes, onOpen }: { title: string; recipes: Rec
             <div className="flex-1 min-w-0">
               <p className="font-condensed font-bold text-sm uppercase tracking-wide text-white leading-snug">{recipe.title}</p>
               <div className="flex items-center gap-3 mt-1">
-                <span className="font-condensed font-black text-base text-edge-red">{recipe.macros_per_serving.protein_g}g</span>
+                <span className="font-condensed font-black text-base text-edge-gold">{recipe.macros_per_serving.protein_g}g</span>
                 <span className="text-edge-muted text-xs">protein</span>
                 <span className="text-white/30 text-xs">·</span>
                 <span className="text-edge-muted text-xs">{recipe.macros_per_serving.calories} kcal</span>
@@ -257,9 +257,9 @@ function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }
       </div>
       <h1 className="font-condensed font-black text-3xl uppercase tracking-wide leading-tight text-white mb-6">{recipe.title}</h1>
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="col-span-1 bg-edge-red/10 border border-edge-red/30 rounded-xl p-3 text-center">
-          <p className="font-condensed font-black text-2xl text-edge-red leading-none">{recipe.macros_per_serving.protein_g}g</p>
-          <p className="text-edge-red/70 text-xs mt-1">protein</p>
+        <div className="col-span-1 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-3 text-center">
+          <p className="font-condensed font-black text-2xl text-edge-gold leading-none">{recipe.macros_per_serving.protein_g}g</p>
+          <p className="text-edge-gold/70 text-xs mt-1">protein</p>
         </div>
         <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.calories}</p><p className="text-edge-muted text-xs mt-1">kcal</p></div>
         <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.carbs_g}g</p><p className="text-edge-muted text-xs mt-1">carbs</p></div>
@@ -275,7 +275,7 @@ function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }
               <ul className="space-y-2">
                 {group.items.map((item, ii) => (
                   <li key={ii} className="flex items-start gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-edge-red flex-shrink-0 mt-2" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-edge-gold flex-shrink-0 mt-2" />
                     <span className="text-white/80 text-sm leading-relaxed">{item}</span>
                   </li>
                 ))}
@@ -289,7 +289,7 @@ function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }
         <ol className="space-y-4">
           {recipe.steps.map((step, i) => (
             <li key={i} className="flex items-start gap-4">
-              <span className="font-condensed font-black text-base text-edge-red flex-shrink-0 w-5 text-right leading-relaxed">{i + 1}</span>
+              <span className="font-condensed font-black text-base text-edge-gold flex-shrink-0 w-5 text-right leading-relaxed">{i + 1}</span>
               <span className="text-white/80 text-sm leading-relaxed">{step}</span>
             </li>
           ))}

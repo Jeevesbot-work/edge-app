@@ -7,7 +7,7 @@ const BREATHWORK = {
   box: {
     name: "Box Breathing",
     subtitle: "Navy SEAL technique for stress and focus",
-    color: "#E8291C",
+    color: "#F5A623",
     rounds: 4,
     phases: [
       { label: "Inhale", duration: 4 },

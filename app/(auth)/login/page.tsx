@@ -83,7 +83,7 @@ function LoginForm() {
               placeholder="your@email.com"
               style={{ width: "100%", background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "14px 16px", color: "#F2F1ED", fontFamily: "Inter, sans-serif", fontSize: 16, outline: "none", marginBottom: 16, boxSizing: "border-box" as const }}
             />
-            {error && <p style={{ color: "#E8291C", fontSize: 13, fontFamily: "Inter, sans-serif", marginBottom: 12 }}>{error}</p>}
+            {error && <p style={{ color: "#F5A623", fontSize: 13, fontFamily: "Inter, sans-serif", marginBottom: 12 }}>{error}</p>}
             <button
               type="submit"
               disabled={loading || !email}
