@@ -5,6 +5,7 @@ import Link from "next/link";
 import ApproveButton from "./ApproveButton";
 import AddNoteForm from "./AddNoteForm";
 import ResendLinkButton from "./ResendLinkButton";
+import AssignProgrammeButton from "./AssignProgrammeButton";
 
 export default async function AdminUserPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -76,6 +77,14 @@ export default async function AdminUserPage({ params }: { params: { id: string }
             <p className="text-white/80 text-sm font-body">{profile.injuries}</p>
           </div>
         )}
+      </div>
+
+      {/* Assign programme */}
+      <div className="mb-4">
+        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+          Assign Programme
+        </h2>
+        <AssignProgrammeButton userId={userId} />
       </div>
 
       {/* Admin notes */}
