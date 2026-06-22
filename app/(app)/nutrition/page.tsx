@@ -228,7 +228,7 @@ function RecipeSection({ title, recipes, onOpen }: { title: string; recipes: Rec
         {recipes.map((recipe) => (
           <button key={recipe.id} onClick={() => onOpen(recipe)} className="w-full bg-edge-surface rounded-xl p-4 border border-white/[0.08] flex items-center gap-4 active:bg-white/5 text-left">
             <div className="flex-1 min-w-0">
-              <p className="font-condensed font-bold text-sm uppercase tracking-wide text-white leading-snug">{recipe.title}</p>
+              <p className="font-display font-semibold text-base text-white leading-snug">{recipe.title}</p>
               <div className="flex items-center gap-3 mt-1">
                 <span className="font-condensed font-black text-base text-edge-gold">{recipe.macros_per_serving.protein_g}g</span>
                 <span className="text-edge-muted text-xs">protein</span>
@@ -255,7 +255,7 @@ function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }
         </button>
         <p className="text-edge-muted text-xs font-condensed uppercase tracking-widest">{recipe.section === "breakfast" ? "Breakfast" : "Mains"}</p>
       </div>
-      <h1 className="font-condensed font-black text-3xl uppercase tracking-wide leading-tight text-white mb-6">{recipe.title}</h1>
+      <h1 className="font-display font-semibold text-4xl leading-tight text-white mb-6">{recipe.title}</h1>
       <div className="grid grid-cols-4 gap-2 mb-4">
         <div className="col-span-1 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-3 text-center">
           <p className="font-condensed font-black text-2xl text-edge-gold leading-none">{recipe.macros_per_serving.protein_g}g</p>
