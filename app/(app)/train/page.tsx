@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getClientProgramme, getProgrammeWeek, blockSessionKeys } from "@/lib/data/programme-loader";
-import AwaitingProgramme from "@/components/AwaitingProgramme";
+import { BARRY_PROGRAMME } from "@/lib/data/barry-programme";
 import SessionCards from "@/components/SessionCards";
 
 const DAY_TO_JS: Record<string, number> = {
@@ -42,9 +42,7 @@ export default async function TrainPage() {
       .single(),
   ]);
 
-  // No bespoke programme loaded yet → awaiting state (no shared default plan).
-  if (!clientProgramme) return <AwaitingProgramme />;
-  const { programme: prog, sessions } = clientProgramme;
+  const { programme: prog, sessions } = clientProgramme ?? { programme: BARRY_PROGRAMME, sessions: {} };
 
   const currentWeek = Math.max(1, Math.min(progState?.current_week ?? 1, prog.lengthWeeks));
   const weekInfo = getProgrammeWeek(prog, currentWeek);
