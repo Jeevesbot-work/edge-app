@@ -24,7 +24,7 @@ const CALORIE_TARGET = 2200;
 export default function NutritionPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<"today" | "cookbook">("today");
+  const [tab, setTab] = useState<"today" | "cookbook" | "road">("today");
   const [logs, setLogs] = useState<NutritionLog[]>([]);
   const [analysing, setAnalysing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -98,8 +98,9 @@ export default function NutritionPage() {
       </div>
 
       <div className="flex bg-edge-surface rounded-xl p-1 mb-6 border border-white/[0.08]">
-        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-sm uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Today</button>
-        <button onClick={() => setTab("cookbook")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-sm uppercase tracking-widest transition-all ${tab === "cookbook" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Cookbook</button>
+        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Today</button>
+        <button onClick={() => setTab("cookbook")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "cookbook" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Cookbook</button>
+        <button onClick={() => setTab("road")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "road" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>On The Road</button>
       </div>
 
       {tab === "today" && (
@@ -216,6 +217,8 @@ export default function NutritionPage() {
           <RecipeSection title="Mains" recipes={mains} onOpen={setOpenRecipe} />
         </div>
       )}
+
+      {tab === "road" && <FuelOnTheRoad />}
     </div>
   );
 }
@@ -300,6 +303,101 @@ function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }
           <p className="text-white/70 text-xs leading-relaxed"><span className="font-bold text-edge-gold">Note — </span>{recipe.note}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function FuelOnTheRoad() {
+  const green = [
+    { name: "King prawns — 100g pot", note: "The leanest grab going. Zero carbs", protein: "~20g", kcal: "~90 kcal" },
+    { name: "Tuna or mackerel in spring water", note: "Mackerel brings omega-3 with it", protein: "~25g", kcal: "~110 kcal" },
+    { name: "Cooked chicken breast / slices", note: "Best all-rounder", protein: "~28g", kcal: "~165 kcal" },
+    { name: "Plain high-protein yoghurt / skyr", note: "Go natural — flavoured pots hide ~13g sugar", protein: "~18g", kcal: "~100 kcal" },
+    { name: "Turkey or lean ham slices", note: "Skip the honey-glazed ones", protein: "~20g", kcal: "~110 kcal" },
+    { name: "Lean biltong — 35g bag", note: "Clean and chewy — one bag, not three", protein: "~17g", kcal: "~110 kcal" },
+    { name: "Boiled eggs × 2", note: "Two is plenty — fat lives in the yolk", protein: "12g", kcal: "~155 kcal" },
+  ];
+  const amber = [
+    { name: "Cheese / Babybel", note: "73% fat calories. One or two max", protein: "~5g ea", kcal: "~70 kcal ea" },
+    { name: "Whole-milk Greek yoghurt", note: "Plain skyr gives more protein for fewer calories", protein: "~15g", kcal: "~180 kcal" },
+    { name: "Protein bar (Grenade Carb Killa)", note: "Controlled treat, not a staple", protein: "~20g", kcal: "~220 kcal" },
+    { name: "Flavoured protein yoghurt", note: "~13g sugar sneaks in", protein: "~20g", kcal: "~150 kcal" },
+    { name: "Flavoured protein shake / milk", note: "Read the bottle — some hit 22g sugar", protein: "~20g", kcal: "150–225 kcal" },
+  ];
+  const venues = [
+    { place: "Petrol Station", go: "Biltong · boiled eggs · chicken pieces · plain skyr · prawn pot", dodge: "Pastries · sweet jerky · nut bags · protein cookies", best: "Biltong + 2 eggs = ~30g protein / ~230 kcal" },
+    { place: "Coffee Shop", go: "Pret egg/chicken protein pot · egg bites · plain yoghurt · flat white", dodge: "Muffins · paninis · frappes · sweet lattes", best: "Protein pot + flat white = ~22g protein / ~250 kcal" },
+    { place: "Café / Greasy Spoon", go: "Poached eggs + grilled bacon + mushrooms + tomato · or 3-egg omelette", dodge: "Sausage · fried bread · hash brown · toast · beans", best: "Omelette + grilled bacon = ~28g protein / ~350 kcal" },
+    { place: "Supermarket / M&S / Tesco", go: "Roast chicken pieces · prawn pot · plain skyr · edamame", dodge: "Meal-deal combo · big sweet shakes · mass-gainer bars", best: "Chicken pieces + plain skyr = ~45g protein / ~270 kcal" },
+  ];
+
+  return (
+    <div>
+      <p className="text-edge-muted text-xs leading-relaxed mb-6">Protein when you're out and about. Quick, clean grabs that fill you up without blowing the day's calories. Chase high protein, low calories — that's the game.</p>
+
+      <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/30 mb-6">
+        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold mb-1">The Dream Grab</p>
+        <p className="text-white font-display text-lg leading-snug">Prawns + plain skyr</p>
+        <p className="text-edge-muted text-xs mt-1">~40g protein · under 220 kcal · nothing on the road beats it</p>
+      </div>
+
+      <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">Green — eat these first</p>
+      <div className="space-y-2 mb-6">
+        {green.map((item, i) => (
+          <div key={i} className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 mt-1.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-condensed font-bold">{item.name}</p>
+              <p className="text-edge-muted text-xs mt-0.5">{item.note}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-emerald-400 font-condensed font-black text-sm">{item.protein}</p>
+              <p className="text-edge-muted text-xs">{item.kcal}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">Amber — good protein, watch calories</p>
+      <div className="space-y-2 mb-6">
+        {amber.map((item, i) => (
+          <div key={i} className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-edge-gold flex-shrink-0 mt-1.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-condensed font-bold">{item.name}</p>
+              <p className="text-edge-muted text-xs mt-0.5">{item.note}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-edge-gold font-condensed font-black text-sm">{item.protein}</p>
+              <p className="text-edge-muted text-xs">{item.kcal}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] mb-6">
+        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">Red — avoid</p>
+        {["Nuts by the handful — fat bomb, not protein", "Peperami / salami / chorizo — 79% fat calories", "Sweet / teriyaki jerky — reach for plain biltong", "Recovery shakes — 22g+ sugar", "Pastries, flapjacks, protein cookies", "The meal-deal autopilot — sandwich + crisps + fizzy = ~800 kcal"].map((item, i) => (
+          <div key={i} className="flex items-start gap-3 mb-2">
+            <div className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0 mt-1.5" />
+            <p className="text-white/60 text-sm">{item}</p>
+          </div>
+        ))}
+      </div>
+
+      <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">By Venue</p>
+      <div className="space-y-3">
+        {venues.map((v, i) => (
+          <div key={i} className="bg-edge-surface rounded-xl p-4 border border-white/[0.08]">
+            <p className="font-display text-base text-white mb-3">{v.place}</p>
+            <div className="space-y-2">
+              <div><span className="text-emerald-400 text-xs font-condensed font-bold uppercase tracking-wide">Go </span><span className="text-white/70 text-xs">{v.go}</span></div>
+              <div><span className="text-red-400 text-xs font-condensed font-bold uppercase tracking-wide">Dodge </span><span className="text-white/70 text-xs">{v.dodge}</span></div>
+              <div className="mt-2 bg-edge-gold/10 rounded-lg px-3 py-2 border border-edge-gold/20"><p className="text-edge-gold text-xs font-condensed font-bold">{v.best}</p></div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
