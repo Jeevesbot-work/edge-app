@@ -6,6 +6,7 @@ import ApproveButton from "./ApproveButton";
 import AddNoteForm from "./AddNoteForm";
 import ResendLinkButton from "./ResendLinkButton";
 import AssignProgrammeButton from "./AssignProgrammeButton";
+import SetWeekButton from "./SetWeekButton";
 
 export default async function AdminUserPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -86,6 +87,16 @@ export default async function AdminUserPage({ params }: { params: { id: string }
         </h2>
         <AssignProgrammeButton userId={userId} />
       </div>
+
+      {/* Set week */}
+      {programme && (
+        <div className="mb-4">
+          <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+            Set Programme Week
+          </h2>
+          <SetWeekButton userId={userId} currentWeek={programme.current_week ?? 1} />
+        </div>
+      )}
 
       {/* Admin notes */}
       <div className="mb-4">

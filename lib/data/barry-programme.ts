@@ -5,7 +5,7 @@ export const BARRY_PROGRAMME: Programme = {
   title: "Strong90 — Block 1",
   subtitle: "Audit & Foundations",
   owner: "Barry",
-  lengthWeeks: 2,
+  lengthWeeks: 4,
   summary: "Walk into your next cardiology appointment lighter, stronger and with proof that you've done everything in your control. Weeks 1–2 are fasted treadmill every morning and a post-dinner walk every evening. Simple. Consistent. Non-negotiable.",
 
   considerations: [
@@ -40,6 +40,20 @@ export const BARRY_PROGRAMME: Programme = {
       rpe: "—",
       change: "45 minutes fasted treadmill every morning Mon–Sat. Post-dinner walk every evening. Bed by 10pm from now on, no screens after 9:30pm. Max 3 pints this week.",
     },
+    {
+      week: 3,
+      label: "Lock in the protocol",
+      sets: "—",
+      rpe: "—",
+      change: "45 minutes fasted treadmill every morning Mon–Sat. Post-dinner walk every evening. Protein first at every meal — eat your protein before anything else on the plate. Max 2 pints this week. Strength added when clearance confirmed — Nick will update your plan.",
+    },
+    {
+      week: 4,
+      label: "Assess & build",
+      sets: "—",
+      rpe: "—",
+      change: "45 minutes fasted treadmill. Post-dinner walk every evening. Protein first every meal. Zero alcohol target — optional stretch goal. Strength training programme unlocked this week pending cardiology clearance.",
+    },
   ],
 
   progressionRule: "If you can finish a sentence while walking, the pace is right. That's your only rule for these two weeks.",
@@ -53,6 +67,8 @@ export const BARRY_PROGRAMME: Programme = {
       byWeek: [
         { week: 1, duration: "30 min" },
         { week: 2, duration: "45 min" },
+        { week: 3, duration: "45 min" },
+        { week: 4, duration: "45 min" },
       ],
     },
     assaultBike: {
@@ -62,6 +78,8 @@ export const BARRY_PROGRAMME: Programme = {
       byWeek: [
         { week: 1, format: "30 min every evening" },
         { week: 2, format: "30 min every evening" },
+        { week: 3, format: "30 min every evening" },
+        { week: 4, format: "30 min every evening" },
       ],
     },
   },
@@ -74,6 +92,7 @@ export const BARRY_PROGRAMME: Programme = {
       "Alcohol: max 4 pints Week 1 · max 3 pints Week 2",
     ],
     tactics: [
+      "Protein first — eat your protein before anything else on the plate. It blunts the blood sugar spike from carbs and keeps you full longer.",
       "Prep breakfast the night before — grab from the fridge on the way out",
       "Cook double at dinner every night — pack lunch before bed",
       "Post-dinner walk every evening — your wind-down signal",
