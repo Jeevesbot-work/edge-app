@@ -221,8 +221,8 @@ export default async function TrainPage() {
               </p>
             </div>
           </div>
-          <div style={{ background: "rgba(232,41,28,0.06)", border: "1px solid rgba(232,41,28,0.12)", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>
-            <p style={{ fontSize: 11, color: "rgba(232,41,28,0.8)", fontFamily: "Inter, sans-serif" }}>
+          <div style={{ background: "rgba(200,150,90,0.06)", border: "1px solid rgba(200,150,90,0.2)", borderRadius: 10, padding: "8px 12px", marginBottom: 12 }}>
+            <p style={{ fontSize: 11, color: "rgba(200,150,90,0.8)", fontFamily: "Inter, sans-serif" }}>
               {prog.cardio.assaultBike.rule}
             </p>
           </div>
