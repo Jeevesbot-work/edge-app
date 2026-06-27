@@ -313,11 +313,11 @@ function FuelScreen({ tab, setTab }: { tab: "today" | "cookbook" | "road"; setTa
               <div key={r.id} style={{ background: SURFACE, borderRadius: 16, border: `1px solid ${BORDER}`, padding: "16px 18px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontFamily: fraunces, fontSize: 17, color: TEXT, fontWeight: 400, lineHeight: 1.2, marginBottom: 4 }}>{r.name}</p>
-                    <p style={{ fontFamily: inter, fontSize: 11, color: MUTED }}>{r.time} · {r.servings} serving{r.servings > 1 ? "s" : ""}</p>
+                    <p style={{ fontFamily: fraunces, fontSize: 17, color: TEXT, fontWeight: 400, lineHeight: 1.2, marginBottom: 4 }}>{r.title}</p>
+                    <p style={{ fontFamily: inter, fontSize: 11, color: MUTED }}>Serves {r.serves} · {r.section}</p>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
-                    <p style={{ fontFamily: fraunces, fontSize: 20, color: B, fontWeight: 400 }}>{r.macros.protein}g</p>
+                    <p style={{ fontFamily: fraunces, fontSize: 20, color: B, fontWeight: 400 }}>{r.macros_per_serving.protein_g}g</p>
                     <p style={{ fontFamily: inter, fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em" }}>protein</p>
                   </div>
                 </div>
