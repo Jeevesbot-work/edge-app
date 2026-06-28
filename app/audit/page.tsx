@@ -107,7 +107,6 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
 }
 
 function Slider({ value, onChange, min = 1, max = 5, label }: { value: number; onChange: (v: number) => void; min?: number; max?: number; label: string }) {
-  const pct = ((value - min) / (max - min)) * 100;
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
