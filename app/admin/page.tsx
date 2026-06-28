@@ -1,6 +1,5 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import CommandCentre from "./CommandCentre";
 
 const ADMIN_EMAILS = ["n.adams3@icloud.com", "nicosmada3@googlemail.com", "nick@back2strong.online"];
@@ -33,7 +32,9 @@ export default async function AdminPage() {
     admin.from("coach_notes").select("*").order("created_at", { ascending: false }).limit(10),
   ]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pending = (profiles ?? []).filter((p: any) => !p.approved);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const active = (profiles ?? []).filter((p: any) => p.approved);
 
   return (

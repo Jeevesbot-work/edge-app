@@ -20,15 +20,18 @@ const WATCH_ACCOUNTS = [
   { handle: "Men Over 40 Fitness", platform: "Facebook", note: "See what resonates in FB feed format" },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Row = Record<string, any>;
+
 interface Props {
-  active: any[];
-  pending: any[];
-  recentCheckIns: any[];
-  recentMessages: any[];
-  recentMealLogs: any[];
-  tasks: any[];
-  contentItems: any[];
-  coachNotes: any[];
+  active: Row[];
+  pending: Row[];
+  recentCheckIns: Row[];
+  recentMessages: Row[];
+  recentMealLogs: Row[];
+  tasks: Row[];
+  contentItems: Row[];
+  coachNotes: Row[];
 }
 
 function timeAgo(iso: string) {
@@ -70,8 +73,8 @@ function StatusDot({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
-export default function CommandCentre({ active, pending, recentCheckIns, recentMessages, recentMealLogs, tasks: initialTasks, contentItems, coachNotes }: Props) {
-  const [tasks, setTasks] = useState<any[]>(initialTasks);
+export default function CommandCentre({ active, pending, recentCheckIns, recentMessages, recentMealLogs, tasks: initialTasks, coachNotes }: Props) {
+  const [tasks, setTasks] = useState<Row[]>(initialTasks);
   const [newTask, setNewTask] = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState<"HIGH" | "MED" | "LOW">("MED");
   const [saving, setSaving] = useState(false);
@@ -102,10 +105,7 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
     setTasks((t) => t.map((x) => x.id === id ? { ...x, done } : x));
   }
 
-  async function deleteTask(id: string) {
-    await fetch("/api/admin/tasks", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-    setTasks((t) => t.filter((x) => x.id !== id));
-  }
+
 
   const openTasks = tasks.filter((t) => !t.done);
   const priorityColor = (p: string) => p === "HIGH" ? "#F87171" : p === "MED" ? B : MUTED;

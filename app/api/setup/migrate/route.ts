@@ -48,7 +48,7 @@ export async function GET() {
     const admin = createAdminClient();
     const { error } = await admin.rpc("exec_sql", { sql: SQL });
     if (error) {
-      // Try direct query as fallback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: e2 } = await (admin as any).from("admin_tasks").select("id").limit(1);
       if (e2?.code === "42P01") {
         return NextResponse.json({ error: "Table missing — run SQL manually in Supabase dashboard", sql: SQL }, { status: 500 });
@@ -56,7 +56,8 @@ export async function GET() {
       return NextResponse.json({ ok: true, note: "Tables already exist or were created" });
     }
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
