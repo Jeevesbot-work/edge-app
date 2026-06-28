@@ -199,22 +199,30 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
           {/* Member list */}
           <p style={{ fontFamily: inter, fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 8 }}>Active Members</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 20 }}>
-            {clientMembers.map((p) => (
-              <Link key={p.id} href={`/admin/users/${p.id}`} style={{ textDecoration: "none" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 10px", borderRadius: 10, background: SURFACE2 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(200,150,90,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <span style={{ fontFamily: inter, fontSize: 11, fontWeight: 700, color: B }}>{(p.full_name ?? p.email)[0].toUpperCase()}</span>
+            {clientMembers.map((p) => {
+              const lastCI = p.last_check_in;
+              const daysSince = lastCI
+                ? Math.floor((Date.now() - new Date(lastCI).getTime()) / 86400000)
+                : null;
+              const alertColor = daysSince === null ? "#6B7280" : daysSince >= 3 ? "#F87171" : daysSince >= 2 ? "#FBBF24" : "#34D399";
+              const alertLabel = daysSince === null ? "No check-ins" : daysSince === 0 ? "Today" : `${daysSince}d ago`;
+              return (
+                <Link key={p.id} href={`/admin/users/${p.id}`} style={{ textDecoration: "none" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 10px", borderRadius: 10, background: daysSince !== null && daysSince >= 3 ? "rgba(248,113,113,0.06)" : SURFACE2, border: daysSince !== null && daysSince >= 3 ? "1px solid rgba(248,113,113,0.25)" : "1px solid transparent" }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(200,150,90,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <span style={{ fontFamily: inter, fontSize: 11, fontWeight: 700, color: B }}>{(p.full_name ?? p.email)[0].toUpperCase()}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: inter, fontSize: 12, fontWeight: 600, color: TEXT }}>{p.full_name ?? "Unnamed"}</p>
+                      <p style={{ fontFamily: inter, fontSize: 10, color: alertColor, marginTop: 1 }}>Last check-in: {alertLabel}</p>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} style={{ width: 12, height: 12, flexShrink: 0 }}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontFamily: inter, fontSize: 12, fontWeight: 600, color: TEXT }}>{p.full_name ?? "Unnamed"}</p>
-                    <p style={{ fontFamily: inter, fontSize: 10, color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.email}</p>
-                  </div>
-                  <svg viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth={2} style={{ width: 12, height: 12, flexShrink: 0 }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
             <Link href="/admin/add-client" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 10, border: `1px dashed rgba(200,150,90,0.25)`, marginTop: 4 }}>
               <svg viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth={2} style={{ width: 14, height: 14 }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />

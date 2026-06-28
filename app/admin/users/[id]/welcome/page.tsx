@@ -3,12 +3,17 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 const GOAL_LABEL: Record<string, string> = {
-  "fat loss": "Fat Loss",
+  fat: "Lose Body Fat",
+  "fat loss": "Lose Body Fat",
+  muscle: "Build Muscle",
   "build muscle": "Build Muscle",
+  stronger: "Get Stronger",
   "get stronger": "Get Stronger",
-  "improve fitness": "Improve Fitness",
-  "better health": "Better Health",
-  "sport performance": "Sport Performance",
+  back: "Fix Back & Movement",
+  energy: "More Energy & Vitality",
+  identity: "Rebuild My Identity",
+  all: "Full Transformation",
+  performance: "Sport Performance",
 };
 
 const WEEK_THEMES: Record<number, { title: string; subtitle: string; bullets: string[] }> = {
