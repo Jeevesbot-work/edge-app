@@ -10,17 +10,26 @@ const config: Config = {
     extend: {
       colors: {
         edge: {
-          bg: "#0A0A0A",
-          surface: "#1A1A1A",
-          border: "rgba(255,255,255,0.08)",
-          red: "#E8291C",
-          gold: "#F5A623",
-          muted: "rgba(255,255,255,0.55)",
+          // Backgrounds
+          bg:        "#0E1014",
+          surface:   "#171B21",
+          card:      "#13161A",
+          divider:   "#252A32",
+          // Accents
+          bronze:    "#C8965A",
+          red:       "#E8291C",
+          gold:      "#F5A623",
+          emerald:   "#34D399",
+          // Text
+          text:      "#F2F1ED",
+          secondary: "#9BA3AF",
+          muted:     "#3D434D",
         },
       },
       fontFamily: {
+        display: ["Fraunces", "Georgia", "serif"],
         condensed: ["Barlow Condensed", "sans-serif"],
-        body: ["Barlow", "sans-serif"],
+        body:    ["Inter", "system-ui", "sans-serif"],
       },
     },
   },

@@ -161,6 +161,59 @@ export const SESSIONS: Record<string, SessionData> = {
     finisher: "Dead hang: 3 x 30 seconds. Best thing you can do for shoulder health and decompression. Essential for men who sit at desks.",
     coachNote: "Pull sessions build your back, biceps, and rear delts — the muscles that fix posture, prevent injury, and make men look powerful. Most men overdo push and underdo pull. Equal volume in this programme for a reason.",
   },
+
+  // ── Lee — 4-Week Re-Entry Block ─────────────────────────────────────────────
+  // Sets seeded at week-1 baseline (2). Session page reads ?week= to render the
+  // correct number of set rows for weeks 2–4 (3 sets).
+
+  "lower-a": {
+    type: "lower-a",
+    name: "Lower A — Quad Focus",
+    exercises: [
+      { name: "Goblet squat",           sets: 2, reps: "10–12", rest: "90s", notes: "Chest up, sit between hips" },
+      { name: "Leg press",              sets: 2, reps: "12–15", rest: "90s", notes: "Controlled, don't lock knees" },
+      { name: "DB Romanian deadlift",   sets: 2, reps: "10–12", rest: "90s", notes: "Hinge at hips, feel hamstrings" },
+      { name: "Seated leg curl",        sets: 2, reps: "12–15", rest: "60s", notes: "Squeeze, slow lower" },
+      { name: "Standing calf raise",    sets: 2, reps: "15",    rest: "45s", notes: "Full stretch at bottom" },
+      { name: "Dead bug",               sets: 2, reps: "8/side",rest: "45s", notes: "Slow, ribs down" },
+    ],
+  },
+  "upper-a": {
+    type: "upper-a",
+    name: "Upper A — Push Focus",
+    exercises: [
+      { name: "Machine chest press",    sets: 2, reps: "10–12", rest: "90s", notes: "Or flat DB press" },
+      { name: "Incline DB press",       sets: 2, reps: "10–12", rest: "90s", notes: "Upper chest" },
+      { name: "DB shoulder press",      sets: 2, reps: "10–12", rest: "75s", notes: "Don't flare elbows" },
+      { name: "Lateral raise",          sets: 2, reps: "12–15", rest: "45s", notes: "Light — lead with elbows" },
+      { name: "Triceps rope pushdown",  sets: 2, reps: "12–15", rest: "45s", notes: "Full lockout" },
+      { name: "Face pull",              sets: 2, reps: "15",    rest: "45s", notes: "Shoulder health — don't skip" },
+    ],
+  },
+  "lower-b": {
+    type: "lower-b",
+    name: "Lower B — Hinge Focus",
+    exercises: [
+      { name: "Hip thrust",             sets: 2, reps: "10–12", rest: "90s", notes: "Drive through heels, squeeze glutes" },
+      { name: "Hack squat / leg press", sets: 2, reps: "12–15", rest: "90s", notes: "Higher foot placement for hams/glutes" },
+      { name: "Walking lunges",         sets: 2, reps: "10/leg", rest: "75s", notes: "Bodyweight or light DBs to start" },
+      { name: "Leg extension",          sets: 2, reps: "12–15", rest: "60s", notes: "Pause at top" },
+      { name: "Seated calf raise",      sets: 2, reps: "15",    rest: "45s", notes: "Slow tempo" },
+      { name: "Pallof press",           sets: 2, reps: "10/side",rest: "45s", notes: "Resist the twist" },
+    ],
+  },
+  "upper-b": {
+    type: "upper-b",
+    name: "Upper B — Pull Focus",
+    exercises: [
+      { name: "Lat pulldown",           sets: 2, reps: "10–12", rest: "90s", notes: "Or assisted pull-up" },
+      { name: "Chest-supported row",    sets: 2, reps: "10–12", rest: "90s", notes: "Pull to ribs, squeeze back" },
+      { name: "Seated cable row",       sets: 2, reps: "12–15", rest: "75s", notes: "Tall chest" },
+      { name: "DB curl",                sets: 2, reps: "10–12", rest: "45s", notes: "No swinging" },
+      { name: "Hammer curl",            sets: 2, reps: "12",    rest: "45s", notes: "Forearm + bicep" },
+      { name: "Rear delt fly",          sets: 2, reps: "15",    rest: "45s", notes: "Light, controlled" },
+    ],
+  },
 };
 
 export const WEEK_SCHEDULE = [

@@ -7,7 +7,7 @@ const BREATHWORK = {
   box: {
     name: "Box Breathing",
     subtitle: "Navy SEAL technique for stress and focus",
-    color: "#E8291C",
+    color: "#F5A623",
     rounds: 4,
     phases: [
       { label: "Inhale", duration: 4 },
@@ -114,7 +114,7 @@ export default function BreathworkPage() {
           </div>
           <h2 className="font-condensed font-black text-3xl uppercase tracking-wide mb-2">Done.</h2>
           <p className="text-edge-muted mb-8">{bw.rounds} rounds complete.</p>
-          <button onClick={() => router.push("/mind")} className="bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest px-8 py-4 rounded-xl">
+          <button onClick={() => router.push("/mind")} className="bg-edge-bronze text-white font-condensed font-bold text-xl uppercase tracking-widest px-8 py-4 rounded-xl">
             Back to Mind
           </button>
         </div>

@@ -4,11 +4,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import ApproveButton from "./ApproveButton";
 import AddNoteForm from "./AddNoteForm";
+import ResendLinkButton from "./ResendLinkButton";
+import AssignProgrammeButton from "./AssignProgrammeButton";
+import SetWeekButton from "./SetWeekButton";
 
 export default async function AdminUserPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.email !== process.env.ADMIN_EMAIL) redirect("/login");
+  if (!user || !["n.adams3@icloud.com","nicosmada3@googlemail.com","nick@back2strong.online"].includes(user.email ?? "")) redirect("/login");
 
   const admin = createAdminClient();
   const userId = params.id;
@@ -43,10 +46,19 @@ export default async function AdminUserPage({ params }: { params: { id: string }
           <h1 className="font-condensed font-black text-2xl uppercase tracking-wide">{profile?.full_name ?? "Unknown"}</h1>
           <p className="text-edge-muted text-xs">{profile?.email}</p>
         </div>
-        {!profile?.approved && <ApproveButton userId={userId} />}
-        {profile?.approved && (
-          <span className="bg-green-500/20 text-green-400 font-condensed text-xs uppercase px-3 py-1.5 rounded-lg">Active</span>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!profile?.approved && <ApproveButton userId={userId} />}
+          {profile?.approved && (
+            <span className="bg-green-500/20 text-green-400 font-condensed text-xs uppercase px-3 py-1.5 rounded-lg">Active</span>
+          )}
+          {profile?.email && <ResendLinkButton email={profile.email} />}
+          <Link
+            href={`/admin/users/${userId}/welcome`}
+            className="bg-edge-gold/10 border border-edge-gold/30 text-edge-gold font-condensed text-xs uppercase px-3 py-1.5 rounded-lg hover:bg-edge-gold/20 transition-colors"
+          >
+            Welcome Pack
+          </Link>
+        </div>
       </div>
 
       {/* Profile summary */}
@@ -73,6 +85,24 @@ export default async function AdminUserPage({ params }: { params: { id: string }
           </div>
         )}
       </div>
+
+      {/* Assign programme */}
+      <div className="mb-4">
+        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+          Assign Programme
+        </h2>
+        <AssignProgrammeButton userId={userId} />
+      </div>
+
+      {/* Set week */}
+      {programme && (
+        <div className="mb-4">
+          <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+            Set Programme Week
+          </h2>
+          <SetWeekButton userId={userId} currentWeek={programme.current_week ?? 1} />
+        </div>
+      )}
 
       {/* Admin notes */}
       <div className="mb-4">
@@ -120,8 +150,8 @@ export default async function AdminUserPage({ params }: { params: { id: string }
         </h2>
         <div className="space-y-2">
           {messages?.slice(0, 10).reverse().map((m) => (
-            <div key={m.id} className={`rounded-xl p-3 text-sm font-body ${m.role === "user" ? "bg-edge-red/10 border border-edge-red/20 text-white/80" : "bg-edge-surface border border-edge-gold/20 text-white/70"}`}>
-              <span className="text-xs uppercase font-condensed mr-2" style={{ color: m.role === "user" ? "#E8291C" : "#F5A623" }}>
+            <div key={m.id} className={`rounded-xl p-3 text-sm font-body ${m.role === "user" ? "bg-edge-gold/10 border border-edge-gold/20 text-white/80" : "bg-edge-surface border border-edge-gold/20 text-white/70"}`}>
+              <span className="text-xs uppercase font-condensed mr-2" style={{ color: m.role === "user" ? "#F5A623" : "#F5A623" }}>
                 {m.role === "user" ? "Member" : "Edge"}
               </span>
               {m.content}

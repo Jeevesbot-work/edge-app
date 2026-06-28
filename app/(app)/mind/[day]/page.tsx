@@ -8,17 +8,32 @@ import { createClient } from "@/lib/supabase/client";
 
 type Step = "content" | "journal" | "reflection" | "action" | "score" | "done";
 
+const S = {
+  bg:      "#0E1014",
+  surface: "#171B21",
+  divide:  "#252A32",
+  bronze:  "#C8965A",
+  text:    "#F2F1ED",
+  sub:     "#9BA3AF",
+  muted:   "#3D434D",
+  green:   "#34D399",
+} as const;
+
+const serif  = (sz: number, col: string = S.text): React.CSSProperties => ({ fontFamily: "Fraunces, Georgia, serif", fontSize: sz, fontWeight: 400, color: col, lineHeight: 1.15 });
+const sans   = (sz: number, col: string = S.text): React.CSSProperties => ({ fontFamily: "Inter, sans-serif", fontSize: sz, color: col });
+const eyebrow = (col: string = S.sub): React.CSSProperties => ({ fontFamily: "Inter, sans-serif", fontSize: 9, color: col, textTransform: "uppercase", letterSpacing: "0.18em" });
+
 export default function LessonPage() {
   const params = useParams();
   const router = useRouter();
-  const day = parseInt(params.day as string);
+  const day    = parseInt(params.day as string);
   const lesson = LESSONS.find((l) => l.day === day);
 
-  const [step, setStep] = useState<Step>("content");
-  const [reflection, setReflection] = useState("");
-  const [microActionDone, setMicroActionDone] = useState(false);
-  const [score, setScore] = useState(5);
-  const [saving, setSaving] = useState(false);
+  const [step,           setStep]           = useState<Step>("content");
+  const [reflection,     setReflection]     = useState("");
+  const [microActionDone,setMicroActionDone] = useState(false);
+  const [score,          setScore]          = useState(5);
+  const [saving,         setSaving]         = useState(false);
 
   useEffect(() => {
     if (!lesson) return;
@@ -28,17 +43,12 @@ export default function LessonPage() {
       if (!user) return;
       const { data: prog } = await supabase.from("programme_state").select("*").eq("user_id", user.id).single();
       const cycle = prog ? Math.ceil(prog.current_day / 30) : 1;
-      const { data } = await supabase
-        .from("lesson_completions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("day_number", day)
-        .eq("cycle", cycle)
-        .single();
+      const { data } = await supabase.from("lesson_completions").select("*")
+        .eq("user_id", user.id).eq("day_number", day).eq("cycle", cycle).single();
       if (data) {
-        if (data.reflection) setReflection(data.reflection);
+        if (data.reflection)       setReflection(data.reflection);
         if (data.micro_action_done) setMicroActionDone(true);
-        if (data.end_of_day_score) setScore(data.end_of_day_score);
+        if (data.end_of_day_score)  setScore(data.end_of_day_score);
       }
     }
     load();
@@ -51,81 +61,84 @@ export default function LessonPage() {
     if (!user) return;
     const { data: prog } = await supabase.from("programme_state").select("*").eq("user_id", user.id).single();
     const cycle = prog ? Math.ceil(prog.current_day / 30) : 1;
-
     await supabase.from("lesson_completions").upsert({
-      user_id: user.id,
-      day_number: day,
-      cycle,
-      reflection,
-      micro_action_done: microActionDone,
-      end_of_day_score: score,
+      user_id: user.id, day_number: day, cycle, reflection,
+      micro_action_done: microActionDone, end_of_day_score: score,
       completed_at: new Date().toISOString(),
     });
-
     setSaving(false);
     setStep("done");
   }
 
   if (!lesson) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-edge-muted">Lesson not found.</p>
+      <div style={{ minHeight: "100svh", background: S.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <p style={sans(13, S.sub)}>Lesson not found.</p>
       </div>
     );
   }
 
   const phaseColor = getPhaseColor(lesson.phaseCode);
   const steps: Step[] = ["content", "journal", "reflection", "action", "score"];
-  const stepIdx = steps.indexOf(step);
+  const stepIdx  = steps.indexOf(step);
   const progress = stepIdx >= 0 ? stepIdx / (steps.length - 1) : 1;
 
+  const advance = () => {
+    const next: Record<Step, Step> = {
+      content: "journal", journal: "reflection", reflection: "action",
+      action: "score", score: "done", done: "done",
+    };
+    setStep(next[step]);
+  };
+
+  // ── Done screen ────────────────────────────────────────────────────────────
   if (step === "done") {
     return (
-      <div className="min-h-screen bg-edge-bg flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6" style={{ backgroundColor: `${phaseColor}20` }}>
-          <span className="font-condensed font-black text-2xl" style={{ color: phaseColor }}>{lesson.phaseCode}</span>
+      <div style={{ minHeight: "100svh", background: S.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", background: `${phaseColor}18`, border: `1px solid ${phaseColor}40`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <span style={{ ...serif(24, phaseColor) }}>{lesson.phaseCode}</span>
         </div>
-        <h1 className="font-condensed font-black text-3xl uppercase tracking-wide mb-2">Lesson done.</h1>
-        <p className="text-edge-muted font-body text-sm mb-8">Day {day} · {lesson.title}</p>
-        <button
-          onClick={() => router.push("/mind")}
-          className="w-full max-w-xs bg-edge-red text-white font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl"
-        >
+        <h1 style={{ ...serif(36), marginBottom: 6 }}>Lesson done.</h1>
+        <p style={{ ...sans(13, S.sub), marginBottom: 28 }}>Day {day} · {lesson.title}</p>
+        <button onClick={() => router.push("/mind")}
+          style={{ width: "100%", maxWidth: 320, background: phaseColor, color: S.bg, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.12em", padding: "16px 0", borderRadius: 14, border: "none", cursor: "pointer" }}>
           Back to Mind
         </button>
       </div>
     );
   }
 
+  // ── Lesson flow ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-edge-bg flex flex-col max-w-lg mx-auto">
-      {/* Progress */}
-      <div className="h-1 bg-white/10">
-        <div className="h-full transition-all duration-500" style={{ width: `${progress * 100}%`, backgroundColor: phaseColor }} />
+    <div style={{ minHeight: "100svh", background: S.bg, display: "flex", flexDirection: "column", maxWidth: 512, margin: "0 auto" }}>
+
+      {/* Progress bar */}
+      <div style={{ height: 2, background: "rgba(255,255,255,0.07)" }}>
+        <div style={{ height: "100%", background: phaseColor, width: `${progress * 100}%`, transition: "width 0.4s ease" }} />
       </div>
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-4 pt-safe">
-        <button onClick={() => router.back()} className="w-9 h-9 rounded-xl bg-edge-surface border border-white/10 flex items-center justify-center flex-shrink-0">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-white">
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", paddingTop: "max(env(safe-area-inset-top, 0px), 12px)" }}>
+        <button onClick={() => router.back()}
+          style={{ width: 36, height: 36, borderRadius: 12, background: S.surface, border: `1px solid ${S.divide}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke={S.text} strokeWidth={2} style={{ width: 16, height: 16 }}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-condensed uppercase tracking-widest" style={{ color: phaseColor }}>
-            Day {day} · Phase {lesson.phaseCode}
-          </p>
-          <h1 className="font-condensed font-bold text-lg uppercase tracking-wide text-white truncate leading-tight">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ ...eyebrow(phaseColor), marginBottom: 2 }}>Day {day} · Phase {lesson.phaseCode}</p>
+          <h1 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 17, fontWeight: 400, color: S.text, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {lesson.title}
           </h1>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      {/* Content area */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "4px 16px 8px" }}>
+
         {step === "content" && (
           <div>
-            <p className="text-white/90 font-body text-base leading-relaxed whitespace-pre-line mb-8">
+            <p style={{ ...sans(15, "rgba(242,241,237,0.85)"), lineHeight: 1.7, whiteSpace: "pre-line" }}>
               {lesson.content}
             </p>
           </div>
@@ -133,121 +146,81 @@ export default function LessonPage() {
 
         {step === "journal" && (
           <div>
-            <div className="bg-edge-surface rounded-xl p-4 border-l-4 mb-6" style={{ borderColor: phaseColor }}>
-              <p className="text-xs font-condensed uppercase tracking-widest mb-2" style={{ color: phaseColor }}>
-                Voice Journal Prompt
-              </p>
-              <p className="text-white font-body text-base leading-relaxed">{lesson.voiceJournalPrompt}</p>
+            <div style={{ background: S.surface, borderRadius: 16, padding: "16px 18px", borderLeft: `3px solid ${phaseColor}`, marginBottom: 20 }}>
+              <p style={{ ...eyebrow(phaseColor), marginBottom: 8 }}>Voice Journal Prompt</p>
+              <p style={{ ...sans(15, S.text), lineHeight: 1.55 }}>{lesson.voiceJournalPrompt}</p>
             </div>
-            <p className="text-edge-muted text-sm font-body leading-relaxed mb-6">
-              Speak your answer out loud. No one's listening. Just you and the truth.
+            <p style={{ ...sans(13, S.sub), lineHeight: 1.55, marginBottom: 28 }}>
+              Speak your answer out loud. No one&apos;s listening. Just you and the truth.
             </p>
-            <div className="w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4" style={{ background: `${phaseColor}20`, border: `2px solid ${phaseColor}` }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-8 h-8" style={{ color: phaseColor }}>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: `${phaseColor}15`, border: `2px solid ${phaseColor}50`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke={phaseColor} strokeWidth={1.5} style={{ width: 30, height: 30 }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </div>
-            <p className="text-center text-edge-muted text-xs">Voice recording coming soon — speak your answer aloud</p>
+            <p style={{ ...sans(11, S.muted), textAlign: "center" }}>Voice recording coming soon — speak your answer aloud</p>
           </div>
         )}
 
         {step === "reflection" && (
           <div>
-            <p className="text-xs font-condensed uppercase tracking-widest mb-4" style={{ color: phaseColor }}>
-              Written Reflection
-            </p>
-            {lesson.reflectionQuestions.map((q, i) => (
-              <div key={i} className="mb-4">
-                <p className="text-white font-body text-sm leading-relaxed mb-2">{q}</p>
-              </div>
-            ))}
+            <p style={{ ...eyebrow(phaseColor), marginBottom: 14 }}>Written Reflection</p>
+            <div style={{ marginBottom: 14 }}>
+              {lesson.reflectionQuestions.map((q, i) => (
+                <p key={i} style={{ ...sans(14, "rgba(242,241,237,0.85)"), lineHeight: 1.55, marginBottom: 10 }}>{q}</p>
+              ))}
+            </div>
             <textarea
               value={reflection}
               onChange={(e) => setReflection(e.target.value)}
               placeholder="Write your honest answer here..."
               rows={6}
-              className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white font-body text-sm placeholder:text-edge-muted focus:outline-none focus:border-edge-red resize-none"
+              style={{ width: "100%", background: S.surface, border: `1px solid ${S.divide}`, borderRadius: 14, padding: "14px 16px", color: S.text, fontFamily: "Inter, sans-serif", fontSize: 14, lineHeight: 1.5, outline: "none", resize: "none" }}
             />
           </div>
         )}
 
         {step === "action" && (
           <div>
-            <p className="text-xs font-condensed uppercase tracking-widest mb-4" style={{ color: phaseColor }}>
-              Micro Action
-            </p>
-            <div className="bg-edge-surface rounded-xl p-5 border border-white/[0.08] mb-6">
-              <p className="text-white font-body text-base leading-relaxed">{lesson.microAction}</p>
+            <p style={{ ...eyebrow(phaseColor), marginBottom: 14 }}>Micro Action</p>
+            <div style={{ background: S.surface, borderRadius: 16, padding: "18px 20px", border: `1px solid ${S.divide}`, marginBottom: 20 }}>
+              <p style={{ ...sans(15, "rgba(242,241,237,0.9)"), lineHeight: 1.6 }}>{lesson.microAction}</p>
             </div>
-            <button
-              onClick={() => setMicroActionDone(!microActionDone)}
-              className={`w-full py-4 rounded-xl border font-condensed font-bold text-base uppercase tracking-wide transition-all ${
-                microActionDone
-                  ? "border-green-500 bg-green-500/10 text-green-400"
-                  : "border-white/20 text-white/60"
-              }`}
-            >
-              {microActionDone ? "Done" : "Mark as done"}
+            <button onClick={() => setMicroActionDone(!microActionDone)}
+              style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: `1px solid ${microActionDone ? "rgba(52,211,153,0.4)" : S.divide}`, background: microActionDone ? "rgba(52,211,153,0.08)" : "transparent", color: microActionDone ? S.green : S.sub, fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer" }}>
+              {microActionDone ? "Done ✓" : "Mark as done"}
             </button>
           </div>
         )}
 
         {step === "score" && (
           <div>
-            <p className="text-xs font-condensed uppercase tracking-widest mb-2" style={{ color: phaseColor }}>
-              End of Day
-            </p>
-            <h2 className="font-condensed font-bold text-2xl uppercase tracking-wide text-white mb-6 leading-tight">
-              How did today feel?
-            </h2>
-            <div className="flex justify-between mb-2">
-              <span className="text-edge-muted text-xs">Struggling</span>
-              <span className="text-edge-muted text-xs">Powerful</span>
+            <p style={{ ...eyebrow(phaseColor), marginBottom: 12 }}>End of Day</p>
+            <h2 style={{ ...serif(28), marginBottom: 24 }}>How did today feel?</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+              <span style={sans(11, S.sub)}>Struggling</span>
+              <span style={sans(11, S.sub)}>Powerful</span>
             </div>
-            <input
-              type="range"
-              min={1}
-              max={10}
-              value={score}
-              onChange={(e) => setScore(parseInt(e.target.value))}
-              className="w-full mb-4"
-            />
-            <div className="text-center">
-              <span className="font-condensed font-black text-6xl" style={{ color: phaseColor }}>{score}</span>
-              <span className="text-edge-muted text-lg">/10</span>
+            <input type="range" min={1} max={10} value={score} onChange={(e) => setScore(parseInt(e.target.value))} className="w-full mb-6" />
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <span style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 72, fontWeight: 400, color: phaseColor, lineHeight: 1 }}>{score}</span>
+              <span style={sans(18, S.sub)}>/10</span>
             </div>
           </div>
         )}
       </div>
 
       {/* Footer CTA */}
-      <div className="px-4 pb-safe pb-4 pt-2 border-t border-white/[0.08]">
+      <div style={{ padding: "10px 16px", paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)", borderTop: `1px solid rgba(255,255,255,0.05)` }}>
         {step === "score" ? (
-          <button
-            onClick={saveAndFinish}
-            disabled={saving}
-            className="w-full py-4 rounded-xl font-condensed font-bold text-xl uppercase tracking-widest text-white disabled:opacity-50"
-            style={{ backgroundColor: phaseColor }}
-          >
+          <button onClick={saveAndFinish} disabled={saving}
+            style={{ width: "100%", background: saving ? S.divide : phaseColor, color: saving ? S.muted : S.bg, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.12em", padding: "16px 0", borderRadius: 14, border: "none", cursor: saving ? "default" : "pointer" }}>
             {saving ? "Saving..." : "Complete Lesson"}
           </button>
         ) : (
-          <button
-            onClick={() => {
-              const next: Record<Step, Step> = {
-                content: "journal",
-                journal: "reflection",
-                reflection: "action",
-                action: "score",
-                score: "done",
-                done: "done",
-              };
-              setStep(next[step]);
-            }}
-            className="w-full py-4 rounded-xl font-condensed font-bold text-xl uppercase tracking-widest text-white"
-            style={{ backgroundColor: phaseColor }}
-          >
-            {step === "content" ? "Continue" : step === "action" ? "Next" : "Next"}
+          <button onClick={advance}
+            style={{ width: "100%", background: phaseColor, color: S.bg, fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 14, textTransform: "uppercase", letterSpacing: "0.12em", padding: "16px 0", borderRadius: 14, border: "none", cursor: "pointer" }}>
+            {step === "content" ? "Continue" : "Next"}
           </button>
         )}
       </div>

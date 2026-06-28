@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || user.email !== process.env.ADMIN_EMAIL) {
+  if (!user || !["n.adams3@icloud.com","nicosmada3@googlemail.com","nick@back2strong.online"].includes(user.email ?? "")) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
