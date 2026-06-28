@@ -52,6 +52,12 @@ export default async function AdminUserPage({ params }: { params: { id: string }
             <span className="bg-green-500/20 text-green-400 font-condensed text-xs uppercase px-3 py-1.5 rounded-lg">Active</span>
           )}
           {profile?.email && <ResendLinkButton email={profile.email} />}
+          <Link
+            href={`/admin/users/${userId}/welcome`}
+            className="bg-edge-gold/10 border border-edge-gold/30 text-edge-gold font-condensed text-xs uppercase px-3 py-1.5 rounded-lg hover:bg-edge-gold/20 transition-colors"
+          >
+            Welcome Pack
+          </Link>
         </div>
       </div>
 
