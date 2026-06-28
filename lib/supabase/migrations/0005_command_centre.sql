@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS admin_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   text TEXT NOT NULL,
   done BOOLEAN NOT NULL DEFAULT false,
+  priority TEXT NOT NULL DEFAULT 'MED',
   position BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

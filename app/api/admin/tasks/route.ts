@@ -12,10 +12,10 @@ async function checkAdmin() {
 export async function POST(req: NextRequest) {
   const user = await checkAdmin();
   if (!user) return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
-  const { text } = await req.json();
+  const { text, priority } = await req.json();
   if (!text) return NextResponse.json({ error: "Missing text" }, { status: 400 });
   const admin = createAdminClient();
-  const { data, error } = await admin.from("admin_tasks").insert({ text, done: false, position: Date.now() }).select().single();
+  const { data, error } = await admin.from("admin_tasks").insert({ text, done: false, priority: priority ?? "MED", position: Date.now() }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
