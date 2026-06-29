@@ -6,7 +6,8 @@ export async function POST(req: NextRequest) {
   // Auth guard — admin only
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || user.email !== process.env.ADMIN_EMAIL) {
+  const adminEmails = ["n.adams3@icloud.com", "nicosmada3@googlemail.com", "nick@back2strong.online"];
+  if (!user || !adminEmails.includes(user.email ?? "")) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
