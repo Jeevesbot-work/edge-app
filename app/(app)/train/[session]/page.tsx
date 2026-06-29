@@ -8,6 +8,12 @@ import type { Programme, SessionData } from "@/types";
 
 type SetLog = { reps: number; weight: string; done: boolean };
 
+function ytId(url?: string): string | null {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
 const S = {
   bg:      "#0E1014",
   surface: "#171B21",
@@ -279,6 +285,26 @@ export default function SessionPage() {
                     {ex.rest && <span style={{ color: S.sub }}> · {ex.rest} rest</span>}
                   </p>
                   {ex.notes && <p style={sans(11, S.sub)}>{ex.notes}</p>}
+                  {ytId(ex.yt) && (
+                    <a href={ex.yt} target="_blank" rel="noopener noreferrer"
+                      style={{ display: "block", marginTop: 10, position: "relative", borderRadius: 10, overflow: "hidden", textDecoration: "none" }}>
+                      <img
+                        src={`https://img.youtube.com/vi/${ytId(ex.yt)}/mqdefault.jpg`}
+                        alt={`Demo: ${ex.name}`}
+                        style={{ width: "100%", display: "block", opacity: 0.85 }}
+                      />
+                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(200,150,90,0.92)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg viewBox="0 0 24 24" fill="#0E1014" style={{ width: 18, height: 18, marginLeft: 2 }}>
+                            <path d="M5 3l14 9-14 9V3z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div style={{ position: "absolute", bottom: 6, right: 8 }}>
+                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 9, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Watch demo</span>
+                      </div>
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
@@ -349,7 +375,18 @@ export default function SessionPage() {
       <div style={{ flex: 1, overflowY: "auto" }}>
         {/* Exercise */}
         <div style={{ marginBottom: 18 }}>
-          <h2 style={{ ...serif(30), marginBottom: 6 }}>{ex.name}</h2>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+            <h2 style={{ ...serif(30), flex: 1 }}>{ex.name}</h2>
+            {ytId(ex.yt) && (
+              <a href={ex.yt} target="_blank" rel="noopener noreferrer"
+                style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, background: "rgba(200,150,90,0.1)", border: "1px solid rgba(200,150,90,0.25)", borderRadius: 8, padding: "5px 10px", textDecoration: "none", marginTop: 4 }}>
+                <svg viewBox="0 0 24 24" fill={S.bronze} style={{ width: 12, height: 12 }}>
+                  <path d="M5 3l14 9-14 9V3z" />
+                </svg>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: 10, color: S.bronze, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Demo</span>
+              </a>
+            )}
+          </div>
           <p style={{ ...sans(14, S.bronze) }}>
             {effectiveSetsCount ?? ex.sets} sets × {ex.reps}
             {ex.rest && <span style={{ color: S.sub, fontWeight: 400 }}> · {ex.rest} rest</span>}

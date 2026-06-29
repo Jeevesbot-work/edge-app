@@ -119,6 +119,7 @@ export interface Exercise {
   weight?: string;
   notes?: string;
   rest?: string;
+  yt?: string; // YouTube demo URL — shown as tappable thumbnail in session view
 }
 
 export interface SessionData {
