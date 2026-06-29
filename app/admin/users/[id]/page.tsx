@@ -19,12 +19,14 @@ export default async function AdminUserPage({ params }: { params: { id: string }
   const [
     { data: profile },
     { data: programme },
+    { data: clientProgramme },
     { data: checkIns },
     { data: messages },
     { data: adminNotes },
   ] = await Promise.all([
     admin.from("profiles").select("*").eq("id", userId).single(),
     admin.from("programme_state").select("*").eq("user_id", userId).single(),
+    admin.from("client_programmes").select("programme->title, programme->subtitle, updated_at").eq("user_id", userId).maybeSingle(),
     admin.from("check_ins").select("*").eq("user_id", userId).order("date", { ascending: false }).limit(14),
     admin.from("messages").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(20),
     admin.from("admin_notes").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
@@ -86,7 +88,62 @@ export default async function AdminUserPage({ params }: { params: { id: string }
         )}
       </div>
 
-      {/* Assign programme */}
+      {/* Programme status — per-client JSON system */}
+      <div className="mb-4">
+        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+          Programme
+        </h2>
+        <Link href={`/admin/programmes/${userId}`}>
+          <div className={`rounded-xl p-4 border flex items-center gap-4 active:scale-[0.98] transition-transform ${
+            clientProgramme
+              ? "bg-edge-surface border-edge-bronze/30"
+              : "bg-edge-red/10 border-edge-red/30"
+          }`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+              clientProgramme ? "bg-edge-bronze/20" : "bg-edge-red/20"
+            }`}>
+              {clientProgramme ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#C8965A" strokeWidth={2} className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="#E8291C" strokeWidth={2} className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              {clientProgramme ? (
+                <>
+                  <p className="font-condensed font-bold text-sm text-white uppercase tracking-wide">
+                    {(clientProgramme as { title?: string }).title ?? "Programme Loaded"}
+                  </p>
+                  <p className="text-edge-muted text-xs truncate">
+                    {(clientProgramme as { subtitle?: string }).subtitle ?? ""} · Updated{" "}
+                    {clientProgramme.updated_at
+                      ? new Date(clientProgramme.updated_at as string).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+                      : "—"}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-condensed font-bold text-sm text-edge-red uppercase tracking-wide">No Programme Loaded</p>
+                  <p className="text-edge-muted text-xs">Client sees &quot;awaiting programme&quot; state in the app</p>
+                </>
+              )}
+            </div>
+            <span className={`font-condensed text-xs uppercase px-3 py-1.5 rounded-lg flex-shrink-0 ${
+              clientProgramme
+                ? "bg-edge-bronze/20 text-edge-bronze"
+                : "bg-edge-red/20 text-edge-red"
+            }`}>
+              {clientProgramme ? "Update" : "Load"}
+            </span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Legacy assign programme */}
       <div className="mb-4">
         <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
           Assign Programme
@@ -94,7 +151,6 @@ export default async function AdminUserPage({ params }: { params: { id: string }
         <AssignProgrammeButton userId={userId} />
       </div>
 
-      {/* Set week */}
       {programme && (
         <div className="mb-4">
           <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
@@ -103,7 +159,6 @@ export default async function AdminUserPage({ params }: { params: { id: string }
           <SetWeekButton userId={userId} currentWeek={programme.current_week ?? 1} />
         </div>
       )}
-
       {/* Admin notes */}
       <div className="mb-4">
         <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
