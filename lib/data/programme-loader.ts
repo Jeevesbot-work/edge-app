@@ -1,17 +1,29 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import type { ClientProgramme, Programme, ProgrammeWeek } from "@/types";
+
+const ADMIN_EMAILS = ["n.adams3@icloud.com", "nicosmada3@googlemail.com", "nick@back2strong.online"];
 
 /**
  * Load the signed-in client's bespoke programme document from the database.
- * Returns null when the client has no programme assigned yet — callers should
- * render an "awaiting your programme" state in that case (no shared default).
+ * If an admin has set a preview_user_id cookie, load that user's programme instead.
+ * Returns null when the client has no programme assigned yet.
  */
 export async function getClientProgramme(userId: string): Promise<ClientProgramme | null> {
+  const cookieStore = cookies();
+  const previewId = cookieStore.get("preview_user_id")?.value;
+
+  // Admin preview mode — load another client's programme
   const supabase = createClient();
-  const { data } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  const isAdmin = ADMIN_EMAILS.includes(user?.email ?? "");
+  const effectiveId = (isAdmin && previewId) ? previewId : userId;
+
+  const client = (isAdmin && previewId) ? createAdminClient() : createClient();
+  const { data } = await client
     .from("client_programmes")
     .select("programme, sessions")
-    .eq("user_id", userId)
+    .eq("user_id", effectiveId)
     .maybeSingle();
 
   if (!data?.programme) return null;
