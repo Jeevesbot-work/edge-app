@@ -55,6 +55,12 @@ export default async function AdminUserPage({ params }: { params: { id: string }
           )}
           {profile?.email && <ResendLinkButton email={profile.email} />}
           <Link
+            href={`/admin/preview/${userId}`}
+            className="bg-edge-bronze/10 border border-edge-bronze/30 text-edge-bronze font-condensed text-xs uppercase px-3 py-1.5 rounded-lg hover:bg-edge-bronze/20 transition-colors"
+          >
+            Preview App
+          </Link>
+          <Link
             href={`/admin/users/${userId}/welcome`}
             className="bg-edge-gold/10 border border-edge-gold/30 text-edge-gold font-condensed text-xs uppercase px-3 py-1.5 rounded-lg hover:bg-edge-gold/20 transition-colors"
           >
