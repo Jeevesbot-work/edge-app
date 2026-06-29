@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 
 // Lee Thomas — Weeks 1 & 2 starter template.
 // When new clients come in, swap the content here to match their programme.
