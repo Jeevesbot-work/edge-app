@@ -223,7 +223,7 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
                 </Link>
               );
             })}
-            <Link href="/admin/add-client" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 10, border: `1px dashed rgba(200,150,90,0.25)`, marginTop: 4 }}>
+            <Link href="/admin/new" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 10, border: `1px dashed rgba(200,150,90,0.25)`, marginTop: 4 }}>
               <svg viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth={2} style={{ width: 14, height: 14 }}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
@@ -432,7 +432,6 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
         <div style={{ display: "flex", gap: 16 }}>
           <a href="https://app.back2strong.online" style={{ fontFamily: inter, fontSize: 9, color: MUTED, textDecoration: "none" }}>CLIENT APP</a>
           <a href="https://back2strong.online" style={{ fontFamily: inter, fontSize: 9, color: MUTED, textDecoration: "none" }}>WEBSITE</a>
-          <a href="https://app.back2strong.online/preview/barry" style={{ fontFamily: inter, fontSize: 9, color: MUTED, textDecoration: "none" }}>PREVIEW</a>
         </div>
       </div>
     </div>
