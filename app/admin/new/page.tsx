@@ -59,6 +59,36 @@ export default function NewClientPage() {
   });
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const [auditId, setAuditId] = useState<string | null>(null);
+  const [auditData, setAuditData] = useState<Record<string, unknown> | null>(null);
+  const [prefillNote, setPrefillNote] = useState("");
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("audit");
+    if (!id) return;
+    setAuditId(id);
+    fetch(`/api/admin/audit/${id}`)
+      .then((r) => r.json())
+      .then((res: { full_name?: string; email?: string; data?: Record<string, unknown> }) => {
+        const a = res.data;
+        if (!a) return;
+        setAuditData(a);
+        const days = String(a.training_days ?? "").match(/\d+/)?.[0] || "3";
+        setForm((f) => ({
+          ...f,
+          full_name: res.full_name || (a.full_name as string) || f.full_name,
+          email: res.email || (a.email as string) || f.email,
+          age: a.age ? String(a.age) : f.age,
+          days_per_week: days,
+          goal: (a.ninety_day_goal as string) || f.goal,
+          injuries: (a.age_limitations as string) || f.injuries,
+          experience: a.structured_program ? `Structured programme before: ${a.structured_program}. ~${a.training_days ?? "?"} training days/week.` : f.experience,
+        }));
+        setPrefillNote(`Pre-filled from ${res.full_name || "the"} audit — check it over, then Generate.`);
+      })
+      .catch(() => {});
+  }, []);
+
   const [gen, setGen] = useState<Generated | null>(null);
   const [tweak, setTweak] = useState("");
   const [result, setResult] = useState<{ magicLink: string; emailSent: boolean } | null>(null);
@@ -73,6 +103,7 @@ export default function NewClientPage() {
         body: JSON.stringify({
           ...form,
           days_per_week: parseInt(form.days_per_week) || 3,
+          ...(auditData ? { auditContext: auditData } : {}),
           ...(isTweak && gen ? { tweak, previous: gen } : {}),
         }),
       });
@@ -99,6 +130,7 @@ export default function NewClientPage() {
           goal: form.goal, training_state: form.training_state, injuries: form.injuries,
           days_per_week: parseInt(form.days_per_week) || 3,
           programme: gen.programme, sessions: gen.sessions,
+          ...(auditId ? { auditId } : {}),
         }),
       });
       const data = await res.json();
@@ -139,6 +171,11 @@ export default function NewClientPage() {
 
       {step === "intake" && (
         <>
+          {prefillNote && (
+            <div style={{ ...card, borderColor: "rgba(52,211,153,0.4)", background: "rgba(52,211,153,0.08)" }}>
+              <p style={{ color: S.green, fontFamily: "Inter, sans-serif", fontSize: 13, lineHeight: 1.5 }}>{prefillNote}</p>
+            </div>
+          )}
           <div style={card}>
             <label style={label}>Full name *</label>
             <input style={inputStyle} value={form.full_name} onChange={(e) => set("full_name", e.target.value)} placeholder="Barry Smith" />

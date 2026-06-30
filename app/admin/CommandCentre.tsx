@@ -229,6 +229,12 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
               </svg>
               <span style={{ fontFamily: inter, fontSize: 11, color: B, fontWeight: 600 }}>Add New Client</span>
             </Link>
+            <Link href="/admin/audits" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 10, border: `1px dashed rgba(200,150,90,0.25)`, marginTop: 4 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke={B} strokeWidth={2} style={{ width: 14, height: 14 }}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 6 9-6M3 8v8a2 2 0 002 2h14a2 2 0 002-2V8M3 8l9-4 9 4" />
+              </svg>
+              <span style={{ fontFamily: inter, fontSize: 11, color: B, fontWeight: 600 }}>Audit Inbox</span>
+            </Link>
           </div>
 
           {/* Watch accounts */}

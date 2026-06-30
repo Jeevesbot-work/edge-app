@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { email, full_name, age, goal, training_state, injuries, days_per_week, programme, sessions } = body;
+  const { email, full_name, age, goal, training_state, injuries, days_per_week, programme, sessions, auditId } = body;
 
   if (!email || !full_name) {
     return NextResponse.json({ error: "Email and name are required" }, { status: 400 });
@@ -80,6 +80,11 @@ export async function POST(req: NextRequest) {
   );
   if (progError) {
     return NextResponse.json({ error: `Programme: ${progError.message}` }, { status: 500 });
+  }
+
+  // Mark the source audit as onboarded so it drops out of the "new" inbox.
+  if (auditId) {
+    await admin.from("audit_submissions").update({ status: "onboarded" }).eq("id", auditId);
   }
 
   // Best-effort email. Never blocks onboarding — the link is returned regardless.

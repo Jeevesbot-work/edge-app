@@ -1,10 +1,28 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/supabase/server";
+import { AUDIT_TABLE_SQL } from "@/lib/auditTable";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   const d = await req.json();
+
+  // Store the submission so it lands in the admin audit inbox. Best-effort:
+  // a storage failure must never block the client's submission. Self-heals the
+  // table on first ever submission.
+  try {
+    const admin = createAdminClient();
+    const row = { full_name: d.full_name ?? null, email: d.email ?? null, phone: d.phone ?? null, data: d, status: "new" };
+    let { error } = await admin.from("audit_submissions").insert(row);
+    if (error && (error.code === "42P01" || /does not exist/i.test(error.message))) {
+      await admin.rpc("exec_sql", { sql: AUDIT_TABLE_SQL });
+      ({ error } = await admin.from("audit_submissions").insert(row));
+    }
+    if (error) console.error("[audit] store failed:", error.message);
+  } catch (e) {
+    console.error("[audit] store exception:", e);
+  }
 
   const avgEnergy = (
     (d.morning_energy + d.afternoon_energy + d.motivation + d.sleep_quality + d.recovery + d.stress + d.libido) / 7

@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { full_name, age, goal, days_per_week, injuries, equipment, experience, dietary, medical, tweak, previous } = body;
+    const { full_name, age, goal, days_per_week, injuries, equipment, experience, dietary, medical, tweak, previous, auditContext } = body;
 
     let userMessage =
       `Generate a Weeks 1 & 2 starter programme (lengthWeeks: 2) for this client.\n\n` +
@@ -110,8 +110,16 @@ export async function POST(req: NextRequest) {
       `Equipment available: ${equipment || "full gym"}\n` +
       `Training experience: ${experience || "returning after time off"}\n` +
       `Dietary notes / preferences: ${dietary || "none stated"}\n` +
-      `Medical flags: ${medical || "none"}\n\n` +
-      `Return the JSON now.`;
+      `Medical flags: ${medical || "none"}\n`;
+
+    if (auditContext && typeof auditContext === "object") {
+      userMessage +=
+        `\nThis client completed a full Strong90 audit. Use it to make the programme genuinely personal — ` +
+        `pay attention to sleep, energy, stress, alcohol, recovery and what they said about the next decade. ` +
+        `Full audit answers (JSON):\n${JSON.stringify(auditContext)}\n`;
+    }
+
+    userMessage += `\nReturn the JSON now.`;
 
     if (tweak && previous) {
       userMessage =
