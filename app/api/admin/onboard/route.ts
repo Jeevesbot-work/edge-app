@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
   // Mark the source audit as onboarded so it drops out of the "new" inbox.
   if (auditId) {
-    await admin.from("audit_submissions").update({ status: "onboarded" }).eq("id", auditId);
+    await admin.from("coach_notes").update({ tag: "audit:onboarded" }).eq("id", auditId);
   }
 
   // Best-effort email. Never blocks onboarding — the link is returned regardless.

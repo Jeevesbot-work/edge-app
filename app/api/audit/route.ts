@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
-import { AUDIT_TABLE_SQL } from "@/lib/auditTable";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   const d = await req.json();
 
-  // Store the submission so it lands in the admin audit inbox. Best-effort:
-  // a storage failure must never block the client's submission.
-  // We create-and-insert in ONE exec_sql call (direct to Postgres), which bypasses
-  // the PostgREST schema cache entirely — so it works even the first time, before
-  // the cache has caught up with the new table.
+  // Store the submission so it lands in the admin audit inbox. We use the
+  // existing, proven coach_notes table (tag = "audit:new") — no new table, no
+  // exec_sql, no schema-cache quirk. Best-effort: never block the client's submit.
   try {
     const admin = createAdminClient();
-    const esc = (v: unknown) => (v === null || v === undefined || v === "") ? "NULL" : "'" + String(v).replace(/'/g, "''") + "'";
-    const dataLiteral = JSON.stringify(d).replace(/'/g, "''");
-    const sql = `${AUDIT_TABLE_SQL}
-INSERT INTO audit_submissions (full_name, email, phone, data, status)
-VALUES (${esc(d.full_name)}, ${esc(d.email)}, ${esc(d.phone)}, '${dataLiteral}'::jsonb, 'new');`;
-    const { error } = await admin.rpc("exec_sql", { sql });
+    const { error } = await admin.from("coach_notes").insert({
+      title: d.full_name ?? "Audit",
+      body: JSON.stringify(d),
+      tag: "audit:new",
+    });
     if (error) console.error("[audit] store failed:", error.message);
   } catch (e) {
     console.error("[audit] store exception:", e);

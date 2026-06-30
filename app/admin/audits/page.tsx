@@ -1,7 +1,6 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AUDIT_TABLE_SQL, isMissingTableError } from "@/lib/auditTable";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +24,26 @@ export default async function AuditInboxPage() {
 
   const admin = createAdminClient();
 
-  // Ensure the table exists, then read. Self-healing so it never errors on first visit.
-  const SEL = "id, full_name, email, status, created_at, data";
-  const first = await admin.from("audit_submissions").select(SEL).order("created_at", { ascending: false }).limit(100);
-  let data = first.data;
-  if (isMissingTableError(first.error)) {
-    await admin.rpc("exec_sql", { sql: AUDIT_TABLE_SQL });
-    const retry = await admin.from("audit_submissions").select(SEL).order("created_at", { ascending: false }).limit(100);
-    data = retry.data;
-  }
-  const rows: AuditRow[] = (data as AuditRow[] | null) ?? [];
+  // Audits live in coach_notes tagged "audit:*" (proven table, no schema-cache risk).
+  const { data } = await admin
+    .from("coach_notes")
+    .select("id, title, body, tag, created_at")
+    .like("tag", "audit:%")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  const rows: AuditRow[] = (data ?? []).map((n: { id: string; title: string | null; body: string | null; tag: string | null; created_at: string }) => {
+    let parsed: Record<string, unknown> = {};
+    try { parsed = JSON.parse(n.body ?? "{}"); } catch { parsed = {}; }
+    return {
+      id: n.id,
+      full_name: n.title,
+      email: (parsed.email as string) ?? null,
+      status: n.tag === "audit:onboarded" ? "onboarded" : "new",
+      created_at: n.created_at,
+      data: parsed,
+    };
+  });
 
   return (
     <div style={{ minHeight: "100svh", background: S.bg, padding: "32px 20px 80px", maxWidth: 640, margin: "0 auto" }}>
