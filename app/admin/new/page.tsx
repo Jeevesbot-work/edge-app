@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+const ADMIN_EMAILS = ["n.adams3@icloud.com", "nicosmada3@googlemail.com", "nick@back2strong.online"];
 
 const S = {
   bg: "#0E1014",
@@ -40,6 +43,15 @@ export default function NewClientPage() {
   const [step, setStep] = useState<"intake" | "review" | "done">("intake");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  const [auth, setAuth] = useState<{ checked: boolean; email: string | null; isAdmin: boolean }>({ checked: false, email: null, isAdmin: false });
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      const email = user?.email ?? null;
+      setAuth({ checked: true, email, isAdmin: !!email && ADMIN_EMAILS.includes(email) });
+    });
+  }, []);
 
   const [form, setForm] = useState({
     full_name: "", email: "", age: "", goal: "", days_per_week: "3",
@@ -103,6 +115,21 @@ export default function NewClientPage() {
     <div style={{ minHeight: "100svh", background: S.bg, padding: "32px 20px 80px", maxWidth: 560, margin: "0 auto" }}>
       <p style={{ ...label, color: S.bronze }}>Back2Strong · Admin</p>
       <h1 style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 30, color: S.text, fontWeight: 400, margin: "4px 0 24px" }}>New client</h1>
+
+      {auth.checked && !auth.isAdmin && (
+        <div style={{ ...card, borderColor: "rgba(200,150,90,0.45)", background: "rgba(200,150,90,0.08)" }}>
+          <p style={{ color: S.bronze, fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+            {auth.email ? `Signed in as ${auth.email} — not an admin account.` : "You're not signed in."}
+          </p>
+          <p style={{ color: S.sub, fontFamily: "Inter, sans-serif", fontSize: 12, lineHeight: 1.5, marginBottom: 12 }}>
+            Onboarding needs you signed in as your Back2Strong admin email. Sign in, then come back here.
+          </p>
+          <a href="/login" style={{ display: "inline-block", background: S.bronze, color: "#0E1014", borderRadius: 10, padding: "10px 18px", textDecoration: "none", fontFamily: "Inter, sans-serif", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>Go to login →</a>
+        </div>
+      )}
+      {auth.checked && auth.isAdmin && (
+        <p style={{ ...label, color: S.green, marginBottom: 16 }}>● Signed in as {auth.email}</p>
+      )}
 
       {error && (
         <div style={{ ...card, borderColor: "rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.08)" }}>
