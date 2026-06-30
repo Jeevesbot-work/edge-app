@@ -1,7 +1,7 @@
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { AUDIT_TABLE_SQL } from "@/lib/auditTable";
+import { AUDIT_TABLE_SQL, isMissingTableError } from "@/lib/auditTable";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export default async function AuditInboxPage() {
   const SEL = "id, full_name, email, status, created_at, data";
   const first = await admin.from("audit_submissions").select(SEL).order("created_at", { ascending: false }).limit(100);
   let data = first.data;
-  if (first.error && (first.error.code === "42P01" || /does not exist/i.test(first.error.message))) {
+  if (isMissingTableError(first.error)) {
     await admin.rpc("exec_sql", { sql: AUDIT_TABLE_SQL });
     const retry = await admin.from("audit_submissions").select(SEL).order("created_at", { ascending: false }).limit(100);
     data = retry.data;

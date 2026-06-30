@@ -19,4 +19,14 @@ DO $$ BEGIN
     CREATE POLICY "Service role only" ON audit_submissions USING (false);
   END IF;
 END $$;
+
+NOTIFY pgrst, 'reload schema';
 `;
+
+// Supabase/PostgREST reports a missing table in a few different shapes depending
+// on whether Postgres or the REST schema cache is the one that can't find it.
+export function isMissingTableError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code === "42P01" || error.code === "PGRST205") return true;
+  return /does not exist|schema cache|could not find the table/i.test(error.message ?? "");
+}

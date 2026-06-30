@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
-import { AUDIT_TABLE_SQL } from "@/lib/auditTable";
+import { AUDIT_TABLE_SQL, isMissingTableError } from "@/lib/auditTable";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const admin = createAdminClient();
     const row = { full_name: d.full_name ?? null, email: d.email ?? null, phone: d.phone ?? null, data: d, status: "new" };
     let { error } = await admin.from("audit_submissions").insert(row);
-    if (error && (error.code === "42P01" || /does not exist/i.test(error.message))) {
+    if (isMissingTableError(error)) {
       await admin.rpc("exec_sql", { sql: AUDIT_TABLE_SQL });
       ({ error } = await admin.from("audit_submissions").insert(row));
     }
