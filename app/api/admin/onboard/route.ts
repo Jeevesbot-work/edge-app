@@ -43,7 +43,10 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = linkData.user.id;
-  const magicLink = linkData.properties.action_link;
+  // PKCE-independent verification link (see /api/auth/login for why).
+  const tokenHash = linkData.properties.hashed_token;
+  const verificationType = linkData.properties.verification_type ?? "magiclink";
+  const magicLink = `${APP_URL}/auth/callback?token_hash=${tokenHash}&type=${verificationType}`;
   const firstName = String(full_name).split(" ")[0];
 
   const { error: profileError } = await admin.from("profiles").upsert({
