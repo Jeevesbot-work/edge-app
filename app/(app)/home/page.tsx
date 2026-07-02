@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { getLesson } from "@/lib/data/lessons";
 import { getClientProgramme, blockSessionKeys } from "@/lib/data/programme-loader";
@@ -52,6 +53,11 @@ export default async function HomePage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  const cookieStore = cookies();
+  const previewId = cookieStore.get("preview_user_id")?.value;
+  const targetId = previewId ?? user!.id;
+  const db = previewId ? createAdminClient() : supabase;
+
   const today = new Date().toISOString().split("T")[0];
 
   const [
@@ -61,11 +67,11 @@ export default async function HomePage() {
     { data: recentSessions },
     { data: lastMessage },
   ] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user!.id).single(),
-    supabase.from("programme_state").select("*").eq("user_id", user!.id).single(),
-    supabase.from("check_ins").select("*").eq("user_id", user!.id).eq("date", today).single(),
-    supabase.from("training_sessions").select("session_type, completed_at").eq("user_id", user!.id).not("completed_at", "is", null).order("completed_at", { ascending: false }).limit(7),
-    supabase.from("messages").select("content").eq("user_id", user!.id).eq("role", "assistant").order("created_at", { ascending: false }).limit(1),
+    db.from("profiles").select("*").eq("id", targetId).single(),
+    db.from("programme_state").select("*").eq("user_id", targetId).single(),
+    db.from("check_ins").select("*").eq("user_id", targetId).eq("date", today).single(),
+    db.from("training_sessions").select("session_type, completed_at").eq("user_id", targetId).not("completed_at", "is", null).order("completed_at", { ascending: false }).limit(7),
+    db.from("messages").select("content").eq("user_id", targetId).eq("role", "assistant").order("created_at", { ascending: false }).limit(1),
   ]);
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
@@ -73,7 +79,7 @@ export default async function HomePage() {
   const currentWeek = programme?.current_week ?? 1;
 
   // Per-client programme → today's scheduled session.
-  const clientProgramme = await getClientProgramme(user!.id);
+  const clientProgramme = await getClientProgramme(targetId);
   const prog = clientProgramme?.programme ?? null;
   const sessions = clientProgramme?.sessions ?? {};
   const todayName = DAY_NAMES[new Date().getDay()];

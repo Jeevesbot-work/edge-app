@@ -1,7 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getClientProgramme, getProgrammeWeek, blockSessionKeys } from "@/lib/data/programme-loader";
 import { BARRY_PROGRAMME } from "@/lib/data/barry-programme";
 import SessionCards from "@/components/SessionCards";
+import { cookies } from "next/headers";
 
 const DAY_TO_JS: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -22,23 +23,28 @@ export default async function TrainPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const clientProgramme = await getClientProgramme(user!.id);
+  const cookieStore = cookies();
+  const previewId = cookieStore.get("preview_user_id")?.value;
+  const targetId = previewId ?? user!.id;
+  const db = previewId ? createAdminClient() : supabase;
+
+  const clientProgramme = await getClientProgramme(targetId);
 
   const [
     { data: recentSessions },
     { data: progState },
   ] = await Promise.all([
-    supabase
+    db
       .from("training_sessions")
       .select("*")
-      .eq("user_id", user!.id)
+      .eq("user_id", targetId)
       .not("completed_at", "is", null)
       .order("completed_at", { ascending: false })
       .limit(10),
-    supabase
+    db
       .from("programme_state")
       .select("current_week")
-      .eq("user_id", user!.id)
+      .eq("user_id", targetId)
       .single(),
   ]);
 
