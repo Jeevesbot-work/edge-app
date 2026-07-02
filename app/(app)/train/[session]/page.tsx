@@ -44,24 +44,19 @@ export default function SessionPage() {
   const [progLoaded, setProgLoaded] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { setProgLoaded(true); return; }
-      supabase
-        .from("client_programmes")
-        .select("programme, sessions")
-        .eq("user_id", user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data?.programme) {
-            setClientProg({
-              programme: data.programme as Programme,
-              sessions: (data.sessions ?? {}) as Record<string, SessionData>,
-            });
-          }
-          setProgLoaded(true);
-        });
-    });
+    // Server route resolves the effective programme — including admin preview mode.
+    fetch("/api/programme")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.programme) {
+          setClientProg({
+            programme: data.programme as Programme,
+            sessions: (data.sessions ?? {}) as Record<string, SessionData>,
+          });
+        }
+        setProgLoaded(true);
+      })
+      .catch(() => setProgLoaded(true));
   }, []);
 
   const session = clientProg?.sessions[sessionType];
