@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BARRY_PROGRAMME } from "@/lib/data/barry-programme";
+import { BARRY_PROGRAMME_BLOCK2 } from "@/lib/data/barry-programme-block2";
 import { ALEX_GALE_PROGRAMME } from "@/lib/data/alex-gale-programme";
 import { RECIPES } from "@/lib/recipes";
 import type { Programme } from "@/types";
@@ -16,7 +17,8 @@ const inter = "Inter, sans-serif";
 const fraunces = "Fraunces, Georgia, serif";
 
 const CLIENTS: Record<string, { programme: Programme; name: string }> = {
-  barry: { programme: BARRY_PROGRAMME, name: "Barry" },
+  barry: { programme: BARRY_PROGRAMME, name: "Barry — Block 1" },
+  "barry-b2": { programme: BARRY_PROGRAMME_BLOCK2, name: "Barry — Block 2 Weights" },
   alex: { programme: ALEX_GALE_PROGRAMME, name: "Alex Gale" },
 };
 

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { BARRY_PROGRAMME } from "@/lib/data/barry-programme";
+import { BARRY_PROGRAMME_BLOCK2, BARRY_BLOCK2_SESSIONS } from "@/lib/data/barry-programme-block2";
+import { ALEX_GALE_PROGRAMME } from "@/lib/data/alex-gale-programme";
 
-const PROGRAMMES: Record<string, unknown> = {
-  "barry-strong90-block1": BARRY_PROGRAMME,
+const PROGRAMMES: Record<string, { programme: unknown; sessions?: unknown }> = {
+  "barry-strong90-block1": { programme: BARRY_PROGRAMME, sessions: {} },
+  "barry-strong90-block2": { programme: BARRY_PROGRAMME_BLOCK2, sessions: BARRY_BLOCK2_SESSIONS },
+  "alex-gale-strong90-block1": { programme: ALEX_GALE_PROGRAMME, sessions: {} },
 };
 
 export async function POST(req: NextRequest) {
@@ -19,8 +23,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing userId or programmeId" }, { status: 400 });
   }
 
-  const programme = PROGRAMMES[programmeId];
-  if (!programme) {
+  const entry = PROGRAMMES[programmeId];
+  if (!entry) {
     return NextResponse.json({ error: "Unknown programme" }, { status: 400 });
   }
 
@@ -28,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await admin
     .from("client_programmes")
-    .upsert({ user_id: userId, programme, sessions: {} }, { onConflict: "user_id" });
+    .upsert({ user_id: userId, programme: entry.programme, sessions: entry.sessions ?? {} }, { onConflict: "user_id" });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

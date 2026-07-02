@@ -3,7 +3,9 @@
 import { useState } from "react";
 
 const PROGRAMMES = [
-  { id: "barry-strong90-block1", label: "Strong90 Block 1 — Audit & Foundations (Barry)" },
+  { id: "barry-strong90-block1", label: "Barry — Block 1: Audit & Foundations (walking)" },
+  { id: "barry-strong90-block2", label: "Barry — Block 2: Starter Weights Programme" },
+  { id: "alex-gale-strong90-block1", label: "Alex Gale — Block 1: Fuel & Foundation" },
 ];
 
 export default function AssignProgrammeButton({ userId }: { userId: string }) {
