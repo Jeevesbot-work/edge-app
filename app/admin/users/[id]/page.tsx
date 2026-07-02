@@ -7,6 +7,7 @@ import AddNoteForm from "./AddNoteForm";
 import ResendLinkButton from "./ResendLinkButton";
 import AssignProgrammeButton from "./AssignProgrammeButton";
 import SetWeekButton from "./SetWeekButton";
+import MessageClientBox from "./MessageClientBox";
 
 export default async function AdminUserPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -202,6 +203,14 @@ export default async function AdminUserPage({ params }: { params: { id: string }
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Message client */}
+      <div className="mb-4">
+        <h2 className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">
+          Message {profile?.full_name?.split(" ")[0] ?? "Client"}
+        </h2>
+        <MessageClientBox userId={userId} clientName={profile?.full_name ?? "Client"} />
       </div>
 
       {/* Recent messages */}
