@@ -62,7 +62,7 @@ export default async function AdminPage() {
       recentMealLogs={Array.isArray(recentMealLogs) ? recentMealLogs : []}
       tasks={Array.isArray(tasks) ? tasks : []}
       contentItems={Array.isArray(contentItems) ? contentItems : []}
-      coachNotes={Array.isArray(coachNotes) ? coachNotes : []}
+      coachNotes={Array.isArray(coachNotes) ? coachNotes.filter((n) => !String((n as { tag?: string }).tag ?? "").startsWith("audit:")) : []}
     />
   );
 }

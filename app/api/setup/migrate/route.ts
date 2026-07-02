@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { AUDIT_TABLE_SQL } from "@/lib/auditTable";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ CREATE TABLE IF NOT EXISTS coach_notes (
 export async function GET() {
   try {
     const admin = createAdminClient();
-    const { error } = await admin.rpc("exec_sql", { sql: SQL });
+    const { error } = await admin.rpc("exec_sql", { sql: SQL + "\n" + AUDIT_TABLE_SQL });
     if (error) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: e2 } = await (admin as any).from("admin_tasks").select("id").limit(1);

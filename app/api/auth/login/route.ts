@@ -23,7 +23,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error?.message ?? "Failed to generate link" }, { status: 500 });
   }
 
-  const magicLink = data.properties.action_link;
+  // Build a token_hash verification link (PKCE-independent). Server-generated
+  // links have no browser code-verifier, so the default action_link's code-exchange
+  // always fails ("link expired"). The callback's verifyOtp path handles this cleanly.
+  const tokenHash = data.properties.hashed_token;
+  const verificationType = data.properties.verification_type ?? "magiclink";
+  const magicLink = `${APP_URL}/auth/callback?token_hash=${tokenHash}&type=${verificationType}`;
 
   const resendRes = await fetch("https://api.resend.com/emails", {
     method: "POST",

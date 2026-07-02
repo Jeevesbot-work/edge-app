@@ -1,9 +1,25 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   const resend = new Resend(process.env.RESEND_API_KEY);
   const d = await req.json();
+
+  // Store the submission so it lands in the admin audit inbox. We use the
+  // existing, proven coach_notes table (tag = "audit:new") — no new table, no
+  // exec_sql, no schema-cache quirk. Best-effort: never block the client's submit.
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.from("coach_notes").insert({
+      title: d.full_name ?? "Audit",
+      body: JSON.stringify(d),
+      tag: "audit:new",
+    });
+    if (error) console.error("[audit] store failed:", error.message);
+  } catch (e) {
+    console.error("[audit] store exception:", e);
+  }
 
   const avgEnergy = (
     (d.morning_energy + d.afternoon_energy + d.motivation + d.sleep_quality + d.recovery + d.stress + d.libido) / 7
