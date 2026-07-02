@@ -10,7 +10,7 @@ const PROGRAMMES = [
 
 export default function AssignProgrammeButton({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [verified, setVerified] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function assign(programmeId: string) {
@@ -22,15 +22,29 @@ export default function AssignProgrammeButton({ userId }: { userId: string }) {
       body: JSON.stringify({ userId, programmeId }),
     });
     const data = await res.json();
+    if (!res.ok) {
+      setLoading(false);
+      setError(data.error ?? "Failed");
+      return;
+    }
+    // Read back from the database — green only means verified.
+    const check = await fetch(`/api/admin/programme-status?userId=${userId}`);
+    const status = await check.json();
     setLoading(false);
-    if (!res.ok) setError(data.error ?? "Failed");
-    else setDone(true);
+    const live = status?.current?.programme;
+    if (live?.id === programmeId) {
+      setVerified(`${live.title} — ${live.subtitle}`);
+    } else {
+      setError(`Assign reported OK but database shows "${live?.title ?? "nothing"}". Do not trust — tell Claude.`);
+    }
   }
 
-  if (done) {
+  if (verified) {
     return (
       <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-center">
-        <p className="text-green-400 text-sm font-condensed font-bold uppercase tracking-wide">Programme assigned</p>
+        <p className="text-green-400 text-sm font-condensed font-bold uppercase tracking-wide">Verified live in database</p>
+        <p className="text-white/70 text-xs mt-1">{verified}</p>
+        <p className="text-white/40 text-xs mt-1">Client sees this on next app open / pull-to-refresh</p>
       </div>
     );
   }
