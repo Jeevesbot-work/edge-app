@@ -1,9 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import {
   type LiveRecipe,
@@ -20,6 +21,18 @@ const RECIPE_INK = "#12151C"; // card surface
 const RECIPE_CREAM = "#F4EEE2"; // titles
 const RECIPE_BRASS = "#C9A24B"; // category kickers / accents
 const RECIPE_OXBLOOD = "#4A1E24"; // coach-note card
+
+// Camera scanner is client-only and heavy — load it lazily so it never
+// blocks the Fuel page and only pulls in when a scan actually starts.
+const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), { ssr: false });
+
+interface ScannedProduct {
+  product_name: string;
+  serving_size: string | null;
+  serving_quantity: number | null;
+  per_100g: { calories: number; protein_g: number; carbs_g: number; fat_g: number };
+  per_serving: { calories: number; protein_g: number; carbs_g: number; fat_g: number } | null;
+}
 
 interface NutritionLog {
   id: string;
@@ -50,6 +63,11 @@ export default function NutritionPage() {
   const [recipes, setRecipes] = useState<LiveRecipe[] | null>(null);
   const [recipesLoading, setRecipesLoading] = useState(false);
   const [recipesError, setRecipesError] = useState(false);
+
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanned, setScanned] = useState<ScannedProduct | null>(null);
+  const [scanGrams, setScanGrams] = useState(100);
 
   useEffect(() => { loadTodaysLogs(); }, []);
 
@@ -117,6 +135,70 @@ export default function NutritionPage() {
     if (latest?.id === id) setLatest(null);
   }
 
+  const handleBarcode = useCallback(async (code: string) => {
+    setScannerOpen(false);
+    setScanLoading(true);
+    setError("");
+    setLatest(null);
+    try {
+      const res = await fetch("/api/nutrition/barcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barcode: code }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Lookup failed. Try again."); return; }
+      if (!data.found) { setError("Not in the food database yet. Snap a photo of it instead — that always works."); return; }
+      setScanned(data);
+      // Default portion: the pack's stated serving size if it has one, else 100g.
+      setScanGrams(data.serving_quantity && data.serving_quantity > 0 ? Math.round(data.serving_quantity) : 100);
+    } catch {
+      setError("Something went wrong. Check your connection and try again.");
+    } finally {
+      setScanLoading(false);
+    }
+  }, []);
+
+  async function logScanned() {
+    if (!scanned) return;
+    const factor = scanGrams / 100;
+    const b = scanned.per_100g;
+    const calories = Math.round(b.calories * factor);
+    const protein_g = Math.round(b.protein_g * factor * 10) / 10;
+    const carbs_g = Math.round(b.carbs_g * factor * 10) / 10;
+    const fat_g = Math.round(b.fat_g * factor * 10) / 10;
+
+    const edge_comment =
+      protein_g >= 20 ? "Solid grab. That's real protein doing the work — exactly what we're after."
+      : protein_g >= 10 ? "Decent. A bit more protein alongside it and you're flying."
+      : "Fuel more than protein. Fine now and then — just don't let it be the whole meal.";
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setError("Session expired — reopen the app and try again."); return; }
+
+    const { data: log, error: insErr } = await supabase
+      .from("nutrition_logs")
+      .insert({ user_id: user.id, meal_name: scanned.product_name, calories, protein_g, carbs_g, fat_g, edge_comment })
+      .select()
+      .single();
+
+    if (insErr || !log) { setError("Couldn't save that log. Try again."); return; }
+    setLogs((prev) => [log, ...prev]);
+    setLatest(log);
+    setScanned(null);
+  }
+
+  // Live preview of macros for the chosen portion, before logging.
+  const previewMacros = scanned
+    ? {
+        calories: Math.round(scanned.per_100g.calories * (scanGrams / 100)),
+        protein_g: Math.round(scanned.per_100g.protein_g * (scanGrams / 100) * 10) / 10,
+        carbs_g: Math.round(scanned.per_100g.carbs_g * (scanGrams / 100) * 10) / 10,
+        fat_g: Math.round(scanned.per_100g.fat_g * (scanGrams / 100) * 10) / 10,
+      }
+    : null;
+
   const totalProtein = logs.reduce((s, l) => s + l.protein_g, 0);
   const totalCalories = logs.reduce((s, l) => s + l.calories, 0);
   const totalCarbs = logs.reduce((s, l) => s + l.carbs_g, 0);
@@ -161,6 +243,53 @@ export default function NutritionPage() {
             </div>
           </button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+
+          <button onClick={() => { setError(""); setScannerOpen(true); }} disabled={analysing || scanLoading} className="w-full bg-edge-surface border border-white/[0.08] rounded-2xl p-4 flex items-center gap-4 mb-6 active:scale-[0.98] transition-transform disabled:opacity-60">
+            <div className="w-11 h-11 rounded-xl bg-edge-gold/10 border border-edge-gold/20 flex items-center justify-center flex-shrink-0">
+              {scanLoading ? <div className="w-5 h-5 border-2 border-edge-gold border-t-transparent rounded-full animate-spin" /> : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-gold">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 5v14M8 5v14M12 5v14M16 5v14M20 5v14" />
+                </svg>
+              )}
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-condensed font-bold text-base uppercase tracking-wide text-white leading-none">{scanLoading ? "Looking it up..." : "Scan Barcode"}</p>
+              <p className="text-edge-muted text-xs mt-0.5">{scanLoading ? "Reading the label" : "Packaged food — exact macros off the label"}</p>
+            </div>
+          </button>
+
+          {scanned && previewMacros && (
+            <div className="mb-6 bg-edge-surface rounded-2xl border border-edge-gold/30 overflow-hidden">
+              <div className="bg-edge-gold/10 px-4 py-3 flex items-center justify-between border-b border-edge-gold/20">
+                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold">Found it</p>
+                <button onClick={() => setScanned(null)} className="text-edge-muted active:text-white">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="p-4">
+                <p className="font-condensed font-bold text-lg text-white mb-1 leading-tight">{scanned.product_name}</p>
+                {scanned.serving_size && <p className="text-edge-muted text-xs mb-4">Pack serving: {scanned.serving_size}</p>}
+
+                <div className="flex items-center gap-3 mb-4">
+                  <button onClick={() => setScanGrams((g) => Math.max(10, g - 10))} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white text-xl leading-none active:bg-white/10">−</button>
+                  <div className="flex-1 text-center">
+                    <input type="number" value={scanGrams} onChange={(e) => setScanGrams(Math.max(1, Math.min(2000, parseInt(e.target.value) || 0)))} className="w-full bg-transparent text-center font-condensed font-black text-2xl text-white outline-none" />
+                    <p className="text-edge-muted text-xs -mt-1">grams</p>
+                  </div>
+                  <button onClick={() => setScanGrams((g) => Math.min(2000, g + 10))} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white text-xl leading-none active:bg-white/10">+</button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  <MacroCell label="Cal" value={previewMacros.calories} unit="" highlight />
+                  <MacroCell label="Protein" value={previewMacros.protein_g} unit="g" />
+                  <MacroCell label="Carbs" value={previewMacros.carbs_g} unit="g" />
+                  <MacroCell label="Fat" value={previewMacros.fat_g} unit="g" />
+                </div>
+
+                <button onClick={logScanned} className="w-full bg-edge-gold rounded-xl py-3 font-condensed font-bold text-sm uppercase tracking-widest text-white active:scale-[0.98] transition-transform">Log It</button>
+              </div>
+            </div>
+          )}
 
           {preview && analysing && (
             <div className="mb-6 rounded-2xl overflow-hidden border border-white/10 relative">
@@ -262,6 +391,8 @@ export default function NutritionPage() {
       )}
 
       {tab === "road" && <FuelOnTheRoad />}
+
+      {scannerOpen && <BarcodeScanner onDetected={handleBarcode} onClose={() => setScannerOpen(false)} />}
     </div>
   );
 }
