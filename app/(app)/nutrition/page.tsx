@@ -5,7 +5,21 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { RECIPES, type Recipe } from "@/lib/recipes";
+import {
+  type LiveRecipe,
+  type RecipeCategory,
+  RECIPE_COLUMNS,
+  CATEGORY_ORDER,
+  CATEGORY_LABEL,
+  sortRecipes,
+  totalTimeMins,
+} from "@/lib/recipes-live";
+
+// Recipe library palette — branded, typographic, image-free (per Fuel design brief).
+const RECIPE_INK = "#12151C"; // card surface
+const RECIPE_CREAM = "#F4EEE2"; // titles
+const RECIPE_BRASS = "#C9A24B"; // category kickers / accents
+const RECIPE_OXBLOOD = "#4A1E24"; // coach-note card
 
 interface NutritionLog {
   id: string;
@@ -24,15 +38,44 @@ const CALORIE_TARGET = 2200;
 export default function NutritionPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<"today" | "cookbook" | "road">("today");
+  const [tab, setTab] = useState<"today" | "recipes" | "road">("today");
   const [logs, setLogs] = useState<NutritionLog[]>([]);
   const [analysing, setAnalysing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [latest, setLatest] = useState<NutritionLog | null>(null);
   const [error, setError] = useState("");
-  const [openRecipe, setOpenRecipe] = useState<Recipe | null>(null);
+  const [openRecipe, setOpenRecipe] = useState<LiveRecipe | null>(null);
+
+  // Live recipe library (Supabase). Lazily loaded the first time the tab opens.
+  const [recipes, setRecipes] = useState<LiveRecipe[] | null>(null);
+  const [recipesLoading, setRecipesLoading] = useState(false);
+  const [recipesError, setRecipesError] = useState(false);
 
   useEffect(() => { loadTodaysLogs(); }, []);
+
+  useEffect(() => {
+    if (tab === "recipes" && recipes === null && !recipesLoading && !recipesError) {
+      loadRecipes();
+    }
+  }, [tab, recipes, recipesLoading, recipesError]);
+
+  async function loadRecipes() {
+    setRecipesLoading(true);
+    setRecipesError(false);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("recipes")
+        .select(RECIPE_COLUMNS)
+        .eq("published", true);
+      if (error) throw error;
+      setRecipes(sortRecipes((data ?? []) as LiveRecipe[]));
+    } catch {
+      setRecipesError(true);
+    } finally {
+      setRecipesLoading(false);
+    }
+  }
 
   async function loadTodaysLogs() {
     const supabase = createClient();
@@ -80,8 +123,6 @@ export default function NutritionPage() {
   const totalFat = logs.reduce((s, l) => s + l.fat_g, 0);
   const proteinPct = Math.min((totalProtein / PROTEIN_TARGET) * 100, 100);
   const caloriePct = Math.min((totalCalories / CALORIE_TARGET) * 100, 100);
-  const breakfasts = RECIPES.filter((r) => r.section === "breakfast");
-  const mains = RECIPES.filter((r) => r.section === "main");
 
   if (openRecipe) return <RecipeDetail recipe={openRecipe} onBack={() => setOpenRecipe(null)} />;
 
@@ -99,7 +140,7 @@ export default function NutritionPage() {
 
       <div className="flex bg-edge-surface rounded-xl p-1 mb-6 border border-white/[0.08]">
         <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Today</button>
-        <button onClick={() => setTab("cookbook")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "cookbook" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Cookbook</button>
+        <button onClick={() => setTab("recipes")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "recipes" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Recipes</button>
         <button onClick={() => setTab("road")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "road" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>On The Road</button>
       </div>
 
@@ -210,12 +251,14 @@ export default function NutritionPage() {
         </>
       )}
 
-      {tab === "cookbook" && (
-        <div>
-          <p className="text-edge-muted text-xs leading-relaxed mb-6">13 high-protein meals built for men who train. Protein first — that is the number that matters.</p>
-          <RecipeSection title="Breakfast" recipes={breakfasts} onOpen={setOpenRecipe} />
-          <RecipeSection title="Mains" recipes={mains} onOpen={setOpenRecipe} />
-        </div>
+      {tab === "recipes" && (
+        <RecipeLibrary
+          recipes={recipes}
+          loading={recipesLoading}
+          error={recipesError}
+          onRetry={loadRecipes}
+          onOpen={setOpenRecipe}
+        />
       )}
 
       {tab === "road" && <FuelOnTheRoad />}
@@ -223,86 +266,221 @@ export default function NutritionPage() {
   );
 }
 
-function RecipeSection({ title, recipes, onOpen }: { title: string; recipes: Recipe[]; onOpen: (r: Recipe) => void }) {
-  return (
-    <div className="mb-8">
-      <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">{title}</p>
-      <div className="space-y-2">
-        {recipes.map((recipe) => (
-          <button key={recipe.id} onClick={() => onOpen(recipe)} className="w-full bg-edge-surface rounded-xl p-4 border border-white/[0.08] flex items-center gap-4 active:bg-white/5 text-left">
-            <div className="flex-1 min-w-0">
-              <p className="font-display font-semibold text-base text-white leading-snug">{recipe.title}</p>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="font-condensed font-black text-base text-edge-gold">{recipe.macros_per_serving.protein_g}g</span>
-                <span className="text-edge-muted text-xs">protein</span>
-                <span className="text-white/30 text-xs">·</span>
-                <span className="text-edge-muted text-xs">{recipe.macros_per_serving.calories} kcal</span>
-                <span className="text-white/30 text-xs">·</span>
-                <span className="text-edge-muted text-xs">serves {recipe.serves}</span>
-              </div>
-            </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-          </button>
-        ))}
+function RecipeLibrary({
+  recipes,
+  loading,
+  error,
+  onRetry,
+  onOpen,
+}: {
+  recipes: LiveRecipe[] | null;
+  loading: boolean;
+  error: boolean;
+  onRetry: () => void;
+  onOpen: (r: LiveRecipe) => void;
+}) {
+  if (loading || recipes === null) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-edge-gold border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-edge-muted text-sm">Loading recipes…</p>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-white/80 text-sm mb-1">Couldn&apos;t load the recipes.</p>
+        <p className="text-edge-muted text-xs mb-5">Check your connection and try again.</p>
+        <button
+          onClick={onRetry}
+          className="font-condensed font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-lg"
+          style={{ backgroundColor: RECIPE_BRASS, color: RECIPE_INK }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (recipes.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-white/80 text-sm mb-1">No recipes yet.</p>
+        <p className="text-edge-muted text-xs">New recipes will show up here as they&apos;re added.</p>
+      </div>
+    );
+  }
+
+  const groups = CATEGORY_ORDER
+    .map((category) => ({ category, items: recipes.filter((r) => r.category === category) }))
+    .filter((g) => g.items.length > 0);
+
+  return (
+    <div>
+      <p className="text-edge-muted text-xs leading-relaxed mb-6">
+        High-protein recipes built for men who train. Protein first — that&apos;s the number that matters.
+      </p>
+      {groups.map((group, gi) => (
+        <div key={group.category} className={`mb-8 anim-${Math.min(gi, 4)}`}>
+          <p
+            className="font-condensed font-bold text-xs uppercase tracking-[0.2em] mb-3"
+            style={{ color: RECIPE_BRASS }}
+          >
+            {CATEGORY_LABEL[group.category]}
+          </p>
+          <div className="space-y-2">
+            {group.items.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }) {
+function RecipeCard({ recipe, onOpen }: { recipe: LiveRecipe; onOpen: (r: LiveRecipe) => void }) {
+  const time = totalTimeMins(recipe);
+  return (
+    <button
+      onClick={() => onOpen(recipe)}
+      className="pressable w-full rounded-2xl p-4 border border-white/[0.06] flex items-center gap-4 text-left"
+      style={{ backgroundColor: RECIPE_INK }}
+    >
+      <div className="flex-1 min-w-0">
+        <p
+          className="font-condensed font-bold text-[10px] uppercase tracking-[0.22em] mb-1.5"
+          style={{ color: RECIPE_BRASS }}
+        >
+          {CATEGORY_LABEL[recipe.category]}
+        </p>
+        <p
+          className="font-display font-semibold text-lg leading-snug"
+          style={{ color: RECIPE_CREAM }}
+        >
+          {recipe.title}
+        </p>
+        {recipe.description && (
+          <p className="text-edge-secondary text-xs leading-relaxed mt-1 line-clamp-1">{recipe.description}</p>
+        )}
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          {recipe.calories != null && <MetaChip>{recipe.calories} kcal</MetaChip>}
+          {recipe.protein_g != null && <MetaChip accent>{recipe.protein_g}g protein</MetaChip>}
+          {time > 0 && <MetaChip>{time} min</MetaChip>}
+        </div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+    </button>
+  );
+}
+
+function MetaChip({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
+  return (
+    <span
+      className="font-condensed font-bold text-[11px] uppercase tracking-wide px-2 py-0.5 rounded-md"
+      style={
+        accent
+          ? { color: RECIPE_BRASS, backgroundColor: "rgba(201,162,75,0.12)" }
+          : { color: "#9BA3AF", backgroundColor: "rgba(255,255,255,0.05)" }
+      }
+    >
+      {children}
+    </span>
+  );
+}
+
+function RecipeDetail({ recipe, onBack }: { recipe: LiveRecipe; onBack: () => void }) {
+  const time = totalTimeMins(recipe);
+  const metaBits = [
+    recipe.servings != null ? `Serves ${recipe.servings}` : null,
+    recipe.prep_time_mins ? `${recipe.prep_time_mins} min prep` : null,
+    recipe.cook_time_mins ? `${recipe.cook_time_mins} min cook` : null,
+    !recipe.prep_time_mins && !recipe.cook_time_mins && time > 0 ? `${time} min` : null,
+  ].filter(Boolean) as string[];
+
   return (
     <div className="min-h-screen bg-edge-bg max-w-lg mx-auto px-4 pt-safe pb-24">
       <div className="flex items-center gap-3 py-4 mb-6">
         <button onClick={onBack} className="w-9 h-9 rounded-xl bg-edge-surface border border-white/10 flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
         </button>
-        <p className="text-edge-muted text-xs font-condensed uppercase tracking-widest">{recipe.section === "breakfast" ? "Breakfast" : "Mains"}</p>
+        <p className="font-condensed font-bold text-xs uppercase tracking-[0.2em]" style={{ color: RECIPE_BRASS }}>
+          {CATEGORY_LABEL[recipe.category]}
+        </p>
       </div>
-      <h1 className="font-display font-semibold text-4xl leading-tight text-white mb-6">{recipe.title}</h1>
-      <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="col-span-1 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-3 text-center">
-          <p className="font-condensed font-black text-2xl text-edge-gold leading-none">{recipe.macros_per_serving.protein_g}g</p>
-          <p className="text-edge-gold/70 text-xs mt-1">protein</p>
-        </div>
-        <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.calories}</p><p className="text-edge-muted text-xs mt-1">kcal</p></div>
-        <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.carbs_g}g</p><p className="text-edge-muted text-xs mt-1">carbs</p></div>
-        <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.fat_g}g</p><p className="text-edge-muted text-xs mt-1">fat</p></div>
+
+      <h1 className="font-display font-semibold text-4xl leading-tight mb-3" style={{ color: RECIPE_CREAM }}>{recipe.title}</h1>
+      {recipe.description && <p className="text-edge-secondary text-sm leading-relaxed mb-6">{recipe.description}</p>}
+
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        <MacroStat value={recipe.calories} label="kcal" />
+        <MacroStat value={recipe.protein_g} label="protein" unit="g" accent />
+        <MacroStat value={recipe.carbs_g} label="carbs" unit="g" />
+        <MacroStat value={recipe.fat_g} label="fat" unit="g" />
       </div>
-      <p className="text-edge-muted text-xs mb-8">Per serving · estimated · serves {recipe.serves}</p>
-      <div className="mb-8">
-        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Ingredients</p>
-        <div className="space-y-5">
-          {recipe.ingredient_groups.map((group, gi) => (
-            <div key={gi}>
-              {group.heading && <p className="font-condensed font-bold text-xs uppercase tracking-widest text-white/60 mb-2">{group.heading}</p>}
-              <ul className="space-y-2">
-                {group.items.map((item, ii) => (
-                  <li key={ii} className="flex items-start gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-edge-gold flex-shrink-0 mt-2" />
-                    <span className="text-white/80 text-sm leading-relaxed">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="mb-8">
-        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Method</p>
-        <ol className="space-y-4">
-          {recipe.steps.map((step, i) => (
-            <li key={i} className="flex items-start gap-4">
-              <span className="font-condensed font-black text-base text-edge-gold flex-shrink-0 w-5 text-right leading-relaxed">{i + 1}</span>
-              <span className="text-white/80 text-sm leading-relaxed">{step}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-      {recipe.note && (
-        <div className="bg-edge-surface border-l-2 border-edge-gold/60 rounded-r-xl px-4 py-3 mb-8">
-          <p className="text-white/70 text-xs leading-relaxed"><span className="font-bold text-edge-gold">Note — </span>{recipe.note}</p>
+      <p className="text-edge-muted text-xs mb-8">Per serving{metaBits.length > 0 ? ` · ${metaBits.join(" · ")}` : ""}</p>
+
+      {recipe.ingredients.length > 0 && (
+        <div className="mb-8">
+          <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Ingredients</p>
+          <ul className="space-y-2">
+            {recipe.ingredients.map((item, ii) => (
+              <li key={ii} className="flex items-start gap-3">
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2" style={{ backgroundColor: RECIPE_BRASS }} />
+                <span className="text-white/80 text-sm leading-relaxed">{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
+
+      {recipe.method.length > 0 && (
+        <div className="mb-8">
+          <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Method</p>
+          <ol className="space-y-4">
+            {recipe.method.map((step, i) => (
+              <li key={i} className="flex items-start gap-4">
+                <span className="font-condensed font-black text-base flex-shrink-0 w-5 text-right leading-relaxed" style={{ color: RECIPE_BRASS }}>{i + 1}</span>
+                <span className="text-white/80 text-sm leading-relaxed">{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {recipe.coach_note && (
+        <div className="rounded-2xl px-5 py-4 mb-8" style={{ backgroundColor: RECIPE_OXBLOOD }}>
+          <p className="font-condensed font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: RECIPE_BRASS }}>Coach Note</p>
+          <p className="font-display italic text-sm leading-relaxed" style={{ color: RECIPE_CREAM }}>{recipe.coach_note}</p>
+        </div>
+      )}
+
+      {recipe.tags && recipe.tags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-8">
+          {recipe.tags.map((tag) => (
+            <span key={tag} className="font-condensed font-bold text-[11px] uppercase tracking-wide px-2.5 py-1 rounded-md" style={{ color: "#9BA3AF", backgroundColor: "rgba(255,255,255,0.05)" }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MacroStat({ value, label, unit, accent }: { value: number | null; label: string; unit?: string; accent?: boolean }) {
+  const display = value != null ? `${value}${unit ?? ""}` : "—";
+  return (
+    <div
+      className="rounded-xl p-3 text-center border"
+      style={accent
+        ? { backgroundColor: "rgba(201,162,75,0.1)", borderColor: "rgba(201,162,75,0.3)" }
+        : { backgroundColor: RECIPE_INK, borderColor: "rgba(255,255,255,0.06)" }}
+    >
+      <p className="font-condensed font-black text-lg leading-none" style={{ color: accent ? RECIPE_BRASS : RECIPE_CREAM }}>{display}</p>
+      <p className="text-xs mt-1" style={{ color: accent ? "rgba(201,162,75,0.7)" : "#3D434D" }}>{label}</p>
     </div>
   );
 }
