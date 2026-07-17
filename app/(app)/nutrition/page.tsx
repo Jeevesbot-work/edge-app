@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
+import PushOptIn from "@/components/PushOptIn";
 import {
   type LiveRecipe,
   type RecipeCategory,
@@ -324,6 +325,11 @@ export default function NutritionPage() {
               </div>
             </div>
           )}
+
+          {/* Push opt-in appears only after the client has logged a meal — a
+              natural moment, never on first app open. Self-hides if unsupported
+              or already handled. */}
+          <PushOptIn show={logs.length > 0} />
 
           {logs.length > 0 && (
             <div className="anim-2 bg-edge-surface rounded-[20px] p-4 border border-white/[0.08] mb-6">
