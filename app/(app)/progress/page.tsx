@@ -119,7 +119,7 @@ export default async function ProgressPage() {
         </div>
         <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08]">
           <p className="text-edge-muted text-xs uppercase tracking-widest font-condensed mb-2">Avg Energy</p>
-          <p className="font-condensed font-black text-4xl text-edge-gold">{avgEnergy}</p>
+          <p className="font-condensed font-black text-4xl text-edge-bronze">{avgEnergy}</p>
           <p className="text-edge-muted text-xs mt-1">Out of 5 · 30 days</p>
         </div>
         <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08]">
@@ -256,7 +256,7 @@ export default async function ProgressPage() {
           <p className="text-white text-xs font-condensed">{lessonsCompleted}/{totalLessonsInCycle}</p>
         </div>
         <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-2">
-          <div className="h-full bg-edge-gold rounded-full" style={{ width: `${lessonPct}%` }} />
+          <div className="h-full bg-edge-bronze rounded-full" style={{ width: `${lessonPct}%` }} />
         </div>
         <p className="text-edge-muted text-xs">{lessonPct}% of Cycle 1 complete</p>
       </div>
@@ -265,7 +265,7 @@ export default async function ProgressPage() {
       <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] mb-6">
         <div className="flex justify-between items-center mb-3">
           <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted">Sleep Quality</p>
-          <Link href="/sleep" className="text-xs text-edge-gold font-body">Log sleep</Link>
+          <Link href="/sleep" className="text-xs text-edge-bronze font-body">Log sleep</Link>
         </div>
         <div className="flex items-baseline gap-1 mb-2">
           <span className="font-condensed font-black text-3xl text-white">{avgSleep}</span>
@@ -274,7 +274,7 @@ export default async function ProgressPage() {
         {sleepLogs && sleepLogs.length > 0 && (
           <div className="flex items-end gap-1 h-8">
             {sleepLogs.slice(0, 14).reverse().map((s, i) => (
-              <div key={i} className="flex-1 rounded-sm bg-edge-gold/50" style={{ height: `${((s.quality ?? 5) / 10) * 100}%` }} />
+              <div key={i} className="flex-1 rounded-sm bg-edge-bronze/50" style={{ height: `${((s.quality ?? 5) / 10) * 100}%` }} />
             ))}
           </div>
         )}
@@ -282,9 +282,9 @@ export default async function ProgressPage() {
 
       {/* Weekly review */}
       <Link href="/weekly-review">
-        <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/30 flex items-center gap-4 active:bg-white/5">
-          <div className="w-10 h-10 rounded-lg bg-edge-gold/20 flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-gold">
+        <div className="bg-edge-surface rounded-xl p-4 border border-edge-bronze/30 flex items-center gap-4 active:bg-white/5">
+          <div className="w-10 h-10 rounded-lg bg-edge-bronze/20 flex items-center justify-center flex-shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-bronze">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
             </svg>
           </div>

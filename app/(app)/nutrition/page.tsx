@@ -111,16 +111,17 @@ export default function NutritionPage() {
     if (!file) return;
     setError(""); setLatest(null);
     const reader = new FileReader();
-    reader.onload = () => { const dataUrl = reader.result as string; setPreview(dataUrl); analyseImage(file, dataUrl); };
+    reader.onload = () => { const dataUrl = reader.result as string; setPreview(dataUrl); analyseImage(dataUrl); };
     reader.readAsDataURL(file);
   }
 
-  async function analyseImage(file: File, dataUrl: string) {
+  async function analyseImage(dataUrl: string) {
     setAnalysing(true);
     try {
       const base64 = await resizeImage(dataUrl, 1024);
-      const mimeType = file.type || "image/jpeg";
-      const res = await fetch("/api/nutrition/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: base64, mimeType }) });
+      // resizeImage always re-encodes via canvas.toDataURL("image/jpeg", ...), so the
+      // outgoing bytes are JPEG regardless of the source file's original type.
+      const res = await fetch("/api/nutrition/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: base64, mimeType: "image/jpeg" }) });
       if (!res.ok) { const err = await res.json(); setError(err.error || "Analysis failed. Try a clearer photo."); return; }
       const log: NutritionLog = await res.json();
       setLatest(log); setLogs((prev) => [log, ...prev]);
@@ -221,14 +222,14 @@ export default function NutritionPage() {
       </div>
 
       <div className="flex bg-edge-surface rounded-xl p-1 mb-6 border border-white/[0.08]">
-        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Today</button>
-        <button onClick={() => setTab("recipes")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "recipes" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Recipes</button>
-        <button onClick={() => setTab("road")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "road" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>On The Road</button>
+        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-bronze text-white" : "text-edge-muted"}`}>Today</button>
+        <button onClick={() => setTab("recipes")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "recipes" ? "bg-edge-bronze text-white" : "text-edge-muted"}`}>Recipes</button>
+        <button onClick={() => setTab("road")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "road" ? "bg-edge-bronze text-white" : "text-edge-muted"}`}>On The Road</button>
       </div>
 
       {tab === "today" && (
         <>
-          <button onClick={() => fileRef.current?.click()} disabled={analysing} className="w-full bg-edge-gold rounded-2xl p-5 flex items-center gap-4 mb-6 active:scale-[0.98] transition-transform disabled:opacity-60">
+          <button onClick={() => fileRef.current?.click()} disabled={analysing} className="anim-0 pressable w-full bg-edge-bronze rounded-[20px] p-5 flex items-center gap-4 mb-6 transition-transform disabled:opacity-60">
             <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
               {analysing ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> : (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6 text-white">
@@ -244,10 +245,10 @@ export default function NutritionPage() {
           </button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
 
-          <button onClick={() => { setError(""); setScannerOpen(true); }} disabled={analysing || scanLoading} className="w-full bg-edge-surface border border-white/[0.08] rounded-2xl p-4 flex items-center gap-4 mb-6 active:scale-[0.98] transition-transform disabled:opacity-60">
-            <div className="w-11 h-11 rounded-xl bg-edge-gold/10 border border-edge-gold/20 flex items-center justify-center flex-shrink-0">
-              {scanLoading ? <div className="w-5 h-5 border-2 border-edge-gold border-t-transparent rounded-full animate-spin" /> : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-gold">
+          <button onClick={() => { setError(""); setScannerOpen(true); }} disabled={analysing || scanLoading} className="anim-1 pressable w-full bg-edge-surface border border-white/[0.08] rounded-[20px] p-4 flex items-center gap-4 mb-6 transition-transform disabled:opacity-60">
+            <div className="w-11 h-11 rounded-xl bg-edge-bronze/10 border border-edge-bronze/20 flex items-center justify-center flex-shrink-0">
+              {scanLoading ? <div className="w-5 h-5 border-2 border-edge-bronze border-t-transparent rounded-full animate-spin" /> : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-bronze">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 5v14M8 5v14M12 5v14M16 5v14M20 5v14" />
                 </svg>
               )}
@@ -259,9 +260,9 @@ export default function NutritionPage() {
           </button>
 
           {scanned && previewMacros && (
-            <div className="mb-6 bg-edge-surface rounded-2xl border border-edge-gold/30 overflow-hidden">
-              <div className="bg-edge-gold/10 px-4 py-3 flex items-center justify-between border-b border-edge-gold/20">
-                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold">Found it</p>
+            <div className="mb-6 bg-edge-surface rounded-[20px] border border-edge-bronze/30 overflow-hidden">
+              <div className="bg-edge-bronze/10 px-4 py-3 flex items-center justify-between border-b border-edge-bronze/20">
+                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-bronze">Found it</p>
                 <button onClick={() => setScanned(null)} className="text-edge-muted active:text-white">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -286,7 +287,7 @@ export default function NutritionPage() {
                   <MacroCell label="Fat" value={previewMacros.fat_g} unit="g" />
                 </div>
 
-                <button onClick={logScanned} className="w-full bg-edge-gold rounded-xl py-3 font-condensed font-bold text-sm uppercase tracking-widest text-white active:scale-[0.98] transition-transform">Log It</button>
+                <button onClick={logScanned} className="pressable w-full bg-edge-bronze rounded-xl py-3 font-condensed font-bold text-sm uppercase tracking-widest text-white transition-transform">Log It</button>
               </div>
             </div>
           )}
@@ -296,20 +297,20 @@ export default function NutritionPage() {
               <img src={preview} alt="Meal preview" className="w-full object-cover max-h-48" />
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-8 h-8 border-2 border-edge-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <div className="w-8 h-8 border-2 border-edge-bronze border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                   <p className="text-white text-sm font-condensed font-bold uppercase tracking-wide">Reading your plate...</p>
                 </div>
               </div>
             </div>
           )}
 
-          {error && <div className="mb-6 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-4"><p className="text-edge-gold text-sm">{error}</p></div>}
+          {error && <div className="mb-6 bg-edge-red/10 border border-edge-red/30 rounded-xl p-4"><p className="text-edge-red text-sm">{error}</p></div>}
 
           {latest && !analysing && (
-            <div className="mb-6 bg-edge-surface rounded-2xl border border-edge-gold/30 overflow-hidden">
-              <div className="bg-edge-gold/10 px-4 py-3 flex items-center gap-2 border-b border-edge-gold/20">
-                <div className="w-6 h-6 rounded-full bg-edge-gold flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-xs text-edge-bg">E</span></div>
-                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold">Edge says</p>
+            <div className="mb-6 bg-edge-surface rounded-[20px] border border-edge-bronze/30 overflow-hidden">
+              <div className="bg-edge-bronze/10 px-4 py-3 flex items-center gap-2 border-b border-edge-bronze/20">
+                <div className="w-6 h-6 rounded-full bg-edge-bronze flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-xs text-edge-bg">E</span></div>
+                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-bronze">Edge says</p>
               </div>
               <div className="p-4">
                 <p className="font-condensed font-bold text-lg text-white mb-1">{latest.meal_name}</p>
@@ -325,7 +326,7 @@ export default function NutritionPage() {
           )}
 
           {logs.length > 0 && (
-            <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] mb-6">
+            <div className="anim-2 bg-edge-surface rounded-[20px] p-4 border border-white/[0.08] mb-6">
               <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Today's Totals</p>
               <div className="mb-4">
                 <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Protein</span><span className="text-edge-muted text-xs">{Math.round(totalProtein)}g / {PROTEIN_TARGET}g</span></div>
@@ -333,7 +334,7 @@ export default function NutritionPage() {
               </div>
               <div className="mb-4">
                 <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Calories</span><span className="text-edge-muted text-xs">{Math.round(totalCalories)} / {CALORIE_TARGET}</span></div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-edge-gold rounded-full transition-all" style={{ width: `${caloriePct}%` }} /></div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-edge-bronze rounded-full transition-all" style={{ width: `${caloriePct}%` }} /></div>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
                 <div className="text-center"><p className="font-condensed font-bold text-lg text-white">{Math.round(totalProtein)}g</p><p className="text-edge-muted text-xs">Protein</p></div>
@@ -344,7 +345,7 @@ export default function NutritionPage() {
           )}
 
           {logs.length > 0 && (
-            <div className="mb-6">
+            <div className="anim-3 mb-6">
               <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">Today's Meals</p>
               <div className="space-y-3">
                 {logs.map((log) => (
@@ -357,7 +358,7 @@ export default function NutritionPage() {
                     </div>
                     <div className="flex gap-4">
                       <span className="text-edge-muted text-xs">{log.calories} cal</span>
-                      <span className="text-edge-gold text-xs">{log.protein_g}g protein</span>
+                      <span className="text-edge-bronze text-xs">{log.protein_g}g protein</span>
                       <span className="text-edge-muted text-xs">{log.carbs_g}g carbs</span>
                       <span className="text-edge-muted text-xs">{log.fat_g}g fat</span>
                     </div>
@@ -371,8 +372,8 @@ export default function NutritionPage() {
           {logs.length === 0 && !analysing && <div className="text-center py-8 mb-6"><p className="text-edge-muted text-sm">No meals logged today. Snap your first one.</p></div>}
 
           <Link href="/edge">
-            <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/30 flex items-center gap-4 mb-6 active:bg-white/5">
-              <div className="w-10 h-10 rounded-full bg-edge-gold flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-sm text-edge-bg">E</span></div>
+            <div className="anim-4 pressable bg-edge-surface rounded-xl p-4 border border-edge-bronze/30 flex items-center gap-4 mb-6">
+              <div className="w-10 h-10 rounded-full bg-edge-bronze flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-sm text-edge-bg">E</span></div>
               <div className="flex-1"><p className="font-condensed font-bold text-sm uppercase tracking-wide">Ask Edge</p><p className="text-edge-muted text-xs">Pre-workout meals, travel food, what to eat on rest days...</p></div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </div>
@@ -413,7 +414,7 @@ function RecipeLibrary({
   if (loading || recipes === null) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-edge-gold border-t-transparent rounded-full animate-spin mb-4" />
+        <div className="w-8 h-8 border-2 border-edge-bronze border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-edge-muted text-sm">Loading recipes…</p>
       </div>
     );
@@ -644,8 +645,8 @@ function FuelOnTheRoad() {
     <div>
       <p className="text-edge-muted text-xs leading-relaxed mb-6">Protein when you're out and about. Quick, clean grabs that fill you up without blowing the day's calories. Chase high protein, low calories — that's the game.</p>
 
-      <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/30 mb-6">
-        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold mb-1">The Dream Grab</p>
+      <div className="bg-edge-surface rounded-[20px] p-4 border border-edge-bronze/30 mb-6">
+        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-bronze mb-1">The Dream Grab</p>
         <p className="text-white font-display text-lg leading-snug">Prawns + plain skyr</p>
         <p className="text-edge-muted text-xs mt-1">~40g protein · under 220 kcal · nothing on the road beats it</p>
       </div>
@@ -702,7 +703,7 @@ function FuelOnTheRoad() {
             <div className="space-y-2">
               <div><span className="text-emerald-400 text-xs font-condensed font-bold uppercase tracking-wide">Go </span><span className="text-white/70 text-xs">{v.go}</span></div>
               <div><span className="text-red-400 text-xs font-condensed font-bold uppercase tracking-wide">Dodge </span><span className="text-white/70 text-xs">{v.dodge}</span></div>
-              <div className="mt-2 bg-edge-gold/10 rounded-lg px-3 py-2 border border-edge-gold/20"><p className="text-edge-gold text-xs font-condensed font-bold">{v.best}</p></div>
+              <div className="mt-2 bg-edge-bronze/10 rounded-lg px-3 py-2 border border-edge-bronze/20"><p className="text-edge-bronze text-xs font-condensed font-bold">{v.best}</p></div>
             </div>
           </div>
         ))}
@@ -713,15 +714,15 @@ function FuelOnTheRoad() {
 
 function MacroCell({ label, value, unit, highlight }: { label: string; value: number; unit: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-xl p-2 text-center ${highlight ? "bg-edge-gold/10 border border-edge-gold/20" : "bg-white/5"}`}>
-      <p className={`font-condensed font-bold text-lg leading-none ${highlight ? "text-edge-gold" : "text-white"}`}>{Math.round(value)}{unit}</p>
+    <div className={`rounded-xl p-2 text-center ${highlight ? "bg-edge-bronze/10 border border-edge-bronze/20" : "bg-white/5"}`}>
+      <p className={`font-condensed font-bold text-lg leading-none ${highlight ? "text-edge-bronze" : "text-white"}`}>{Math.round(value)}{unit}</p>
       <p className="text-edge-muted text-xs mt-0.5">{label}</p>
     </div>
   );
 }
 
 async function resizeImage(dataUrl: string, maxPx: number): Promise<string> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
@@ -732,6 +733,7 @@ async function resizeImage(dataUrl: string, maxPx: number): Promise<string> {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL("image/jpeg", 0.82).split(",")[1]);
     };
+    img.onerror = () => reject(new Error("Could not read that image."));
     img.src = dataUrl;
   });
 }

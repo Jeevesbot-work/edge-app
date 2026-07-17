@@ -72,13 +72,13 @@ export default function BarcodeScanner({
         <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" playsInline muted />
         {/* Aiming frame */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-72 h-40 border-2 border-edge-gold rounded-2xl relative">
-            <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-edge-gold/80 animate-pulse" />
+          <div className="w-72 h-40 border-2 border-edge-bronze rounded-2xl relative">
+            <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-edge-bronze/80 animate-pulse" />
           </div>
         </div>
         {error && (
-          <div className="absolute bottom-8 left-4 right-4 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-4">
-            <p className="text-edge-gold text-sm">{error}</p>
+          <div className="absolute bottom-8 left-4 right-4 bg-edge-red/10 border border-edge-red/30 rounded-xl p-4">
+            <p className="text-edge-red text-sm">{error}</p>
           </div>
         )}
       </div>
