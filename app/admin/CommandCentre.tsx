@@ -13,13 +13,6 @@ const TEXT = "#F2F1ED";
 const fraunces = "Fraunces, Georgia, serif";
 const inter = "Inter, sans-serif";
 
-const WATCH_ACCOUNTS = [
-  { handle: "@thefitover40man", platform: "Instagram", note: "Performance framing, identity hooks" },
-  { handle: "@fitfatherproject", platform: "Instagram", note: "Transformation storytelling, myth-busting" },
-  { handle: "@jamessmithpt", platform: "Instagram", note: "Direct delivery, opinion posts = high comments" },
-  { handle: "Men Over 40 Fitness", platform: "Facebook", note: "See what resonates in FB feed format" },
-];
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
@@ -84,7 +77,7 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
     ...recentCheckIns.map((c) => ({ type: "checkin" as const, name: c.profiles?.full_name ?? "Member", text: `Energy ${c.morning_energy}/5 · Sleep ${c.sleep_quality}/5${c.notes ? ` · "${c.notes}"` : ""}`, time: c.created_at })),
     ...recentMessages.map((m) => ({ type: "message" as const, name: m.profiles?.full_name ?? "Member", text: m.content?.slice(0, 120), time: m.created_at })),
     ...recentMealLogs.map((l) => ({ type: "meal" as const, name: l.profiles?.full_name ?? "Member", text: `${l.meal_name} · ${l.protein_g}g protein · ${l.calories} kcal`, time: l.created_at })),
-  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 8);
+  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 12);
 
   // Featured member = most recently active non-admin
   const clientMembers = active.filter(p => !["n.adams3@icloud.com","nicosmada3@googlemail.com","nick@back2strong.online"].includes(p.email));
@@ -149,7 +142,7 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
       </div>
 
       {/* ── Main 3-column layout ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 300px", flex: 1, overflow: "hidden", minHeight: 0 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr 380px", flex: 1, overflow: "hidden", minHeight: 0 }}>
 
         {/* ── LEFT: Members ── */}
         <div style={{ borderRight: `1px solid ${BORDER}`, overflowY: "auto", padding: "16px 14px" }}>
@@ -236,20 +229,6 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
               <span style={{ fontFamily: inter, fontSize: 11, color: B, fontWeight: 600 }}>Audit Inbox</span>
             </Link>
           </div>
-
-          {/* Watch accounts */}
-          <p style={{ fontFamily: inter, fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 8 }}>Watch Accounts</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {WATCH_ACCOUNTS.map((a) => (
-              <div key={a.handle} style={{ background: SURFACE2, borderRadius: 10, padding: "10px 12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                  <p style={{ fontFamily: inter, fontSize: 12, fontWeight: 600, color: B }}>{a.handle}</p>
-                  <span style={{ fontFamily: inter, fontSize: 9, color: MUTED, background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>{a.platform.toUpperCase()}</span>
-                </div>
-                <p style={{ fontFamily: inter, fontSize: 11, color: MUTED, lineHeight: 1.4 }}>{a.note}</p>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* ── CENTRE: Content ── */}
@@ -312,24 +291,6 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
             </div>
           </div>
 
-          {/* Accounts to study */}
-          <div>
-            <p style={{ fontFamily: inter, fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 10 }}>Accounts to Study this Week</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {[
-                { handle: "@thefitover40man", followers: "387K", note: "Performance framing, identity hooks" },
-                { handle: "@fitfatherproject", followers: "57K", note: "Transformation storytelling, myth-busting" },
-                { handle: "@jamessmithpt", followers: "2M+", note: "Direct delivery, opinion posts = high comments" },
-                { handle: "Men Over 40 Fitness", followers: "—", note: "See what resonates in FB feed format" },
-              ].map((a) => (
-                <div key={a.handle} style={{ background: SURFACE2, borderRadius: 12, padding: "14px 16px", border: `1px solid ${BORDER}` }}>
-                  <p style={{ fontFamily: inter, fontSize: 13, fontWeight: 600, color: B, marginBottom: 3 }}>{a.handle}</p>
-                  <p style={{ fontFamily: inter, fontSize: 10, color: MUTED, marginBottom: 6 }}>{a.followers} followers</p>
-                  <p style={{ fontFamily: inter, fontSize: 11, color: "rgba(242,241,237,0.55)", lineHeight: 1.4 }}>{a.note}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* ── RIGHT: Actions + Notes + Activity ── */}
@@ -380,50 +341,44 @@ export default function CommandCentre({ active, pending, recentCheckIns, recentM
           </div>
 
           {/* Notes from Claude */}
-          <div style={{ marginBottom: 20 }}>
-            <p style={{ fontFamily: inter, fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 10 }}>Notes from Claude</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {[
-                { date: "08 Jun", text: "Dashboard live. Data updates in real-time from Supabase. Add tasks via the input above." },
-                { date: "08 Jun", text: "Barry is set up and approved in Supabase. programme_state created at Day 1, Week 1. If he hasn't logged in by Thu, use Resend Link in admin panel." },
-              ].map((note, i) => (
-                <div key={i} style={{ background: SURFACE2, borderRadius: 10, padding: "11px 12px", border: `1px solid ${BORDER}` }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 5, alignItems: "center" }}>
-                    <span style={{ fontFamily: inter, fontSize: 9, fontWeight: 700, color: B, letterSpacing: "0.1em" }}>CLAUDE</span>
-                    <span style={{ fontFamily: inter, fontSize: 9, color: MUTED }}>· {note.date}</span>
-                  </div>
-                  <p style={{ fontFamily: inter, fontSize: 11, color: "rgba(242,241,237,0.65)", lineHeight: 1.5 }}>{note.text}</p>
-                </div>
-              ))}
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ fontFamily: inter, fontSize: 11, color: TEXT, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 12 }}>Notes from Claude</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {coachNotes.length === 0 && (
+                <p style={{ fontFamily: inter, fontSize: 13, color: MUTED, textAlign: "center", padding: "14px 0" }}>No notes yet.</p>
+              )}
               {coachNotes.map((n) => (
-                <div key={n.id} style={{ background: SURFACE2, borderRadius: 10, padding: "11px 12px", border: `1px solid ${BORDER}` }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 5, alignItems: "center" }}>
-                    <span style={{ fontFamily: inter, fontSize: 9, fontWeight: 700, color: B, letterSpacing: "0.1em" }}>CLAUDE</span>
-                    <span style={{ fontFamily: inter, fontSize: 9, color: MUTED }}>· {new Date(n.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                <div key={n.id} style={{ background: SURFACE2, borderRadius: 12, padding: "14px 16px", border: `1px solid ${BORDER}` }}>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 7, alignItems: "center" }}>
+                    <span style={{ fontFamily: inter, fontSize: 10, fontWeight: 700, color: B, letterSpacing: "0.1em" }}>CLAUDE</span>
+                    <span style={{ fontFamily: inter, fontSize: 10, color: MUTED }}>· {new Date(n.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
                   </div>
-                  <p style={{ fontFamily: inter, fontSize: 11, color: "rgba(242,241,237,0.65)", lineHeight: 1.5 }}>{n.body}</p>
+                  <p style={{ fontFamily: inter, fontSize: 13, color: "rgba(242,241,237,0.85)", lineHeight: 1.6 }}>{n.body}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Recent check-ins */}
+          {/* Recent activity */}
           <div>
-            <p style={{ fontFamily: inter, fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 10 }}>Recent Check-ins</p>
+            <p style={{ fontFamily: inter, fontSize: 11, color: TEXT, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.2em", marginBottom: 12 }}>Recent Check-ins</p>
             {activityItems.length === 0 ? (
-              <p style={{ fontFamily: inter, fontSize: 12, color: MUTED, textAlign: "center", padding: "12px 0" }}>No check-ins yet.</p>
+              <p style={{ fontFamily: inter, fontSize: 13, color: MUTED, textAlign: "center", padding: "14px 0" }}>No check-ins yet.</p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {activityItems.map((item, i) => (
-                  <div key={i} style={{ background: SURFACE2, borderRadius: 10, padding: "10px 12px", border: `1px solid ${BORDER}` }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: item.type === "checkin" ? "#34D399" : item.type === "meal" ? B : "#60A5FA", flexShrink: 0 }} />
-                        <p style={{ fontFamily: inter, fontSize: 11, fontWeight: 600, color: TEXT }}>{item.name}</p>
+                  <div key={i} style={{ background: SURFACE2, borderRadius: 12, padding: "13px 16px", border: `1px solid ${BORDER}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: item.type === "checkin" ? "#34D399" : item.type === "meal" ? B : "#60A5FA", flexShrink: 0 }} />
+                        <p style={{ fontFamily: inter, fontSize: 13, fontWeight: 600, color: TEXT }}>{item.name}</p>
+                        <span style={{ fontFamily: inter, fontSize: 9, color: MUTED, textTransform: "uppercase", letterSpacing: "0.08em", background: "rgba(255,255,255,0.05)", padding: "2px 7px", borderRadius: 4 }}>
+                          {item.type === "checkin" ? "Check-in" : item.type === "meal" ? "Meal" : "Message"}
+                        </span>
                       </div>
-                      <p style={{ fontFamily: inter, fontSize: 10, color: MUTED }}>{timeAgo(item.time)}</p>
+                      <p style={{ fontFamily: inter, fontSize: 11, color: MUTED }}>{timeAgo(item.time)}</p>
                     </div>
-                    <p style={{ fontFamily: inter, fontSize: 11, color: MUTED, lineHeight: 1.4, paddingLeft: 12 }}>{item.text}</p>
+                    <p style={{ fontFamily: inter, fontSize: 12.5, color: "rgba(242,241,237,0.7)", lineHeight: 1.5, paddingLeft: 16 }}>{item.text}</p>
                   </div>
                 ))}
               </div>
