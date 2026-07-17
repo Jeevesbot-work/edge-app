@@ -118,7 +118,7 @@ export default function NutritionPage() {
   async function analyseImage(dataUrl: string) {
     setAnalysing(true);
     try {
-      const base64 = await resizeImage(dataUrl, 1024);
+      const base64 = await resizeImage(dataUrl, 1568);
       // resizeImage always re-encodes via canvas.toDataURL("image/jpeg", ...), so the
       // outgoing bytes are JPEG regardless of the source file's original type.
       const res = await fetch("/api/nutrition/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: base64, mimeType: "image/jpeg" }) });

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     if (text) {
       const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
+        model: "claude-opus-4-8",
         max_tokens: 400,
         messages: [{
           role: "user",
@@ -53,8 +53,8 @@ Be realistic with estimates based on typical portion sizes. Always return valid 
         : "image/jpeg" as const;
 
       const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-6",
-        max_tokens: 400,
+        model: "claude-opus-4-8",
+        max_tokens: 500,
         messages: [{
           role: "user",
           content: [
@@ -65,6 +65,8 @@ Be realistic with estimates based on typical portion sizes. Always return valid 
             {
               type: "text",
               text: `You are a nutrition analyst for a men's fitness coaching app. Analyse this food photo and respond ONLY with a JSON object — no other text, no markdown, no code fences.
+
+Look carefully before naming anything. Check each item's specific colour, shape, size, skin/peel texture, and any visible cut surface or stem — these are the details that distinguish similar-looking foods (e.g. an apple has a stem indent and waxy skin, a plum is smaller with a smoother rounder shape and a crease line; a nectarine is fuzzless where a peach is fuzzy). If two foods on the plate could be confused, name the one that best matches everything you can see, not just the general shape and colour.
 
 The JSON must have exactly these fields:
 ${JSON_SCHEMA}
