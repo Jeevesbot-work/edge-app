@@ -33,6 +33,15 @@ const NAV = [
     ),
   },
   {
+    href: "/progress",
+    label: "Progress",
+    icon: (active: boolean) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} className="w-[20px] h-[20px]">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 20h18M6 16l4-6 4 3 4-7" />
+      </svg>
+    ),
+  },
+  {
     href: "/edge",
     label: "Coach",
     icon: (active: boolean) => (
