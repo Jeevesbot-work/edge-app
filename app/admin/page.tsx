@@ -20,7 +20,6 @@ export default async function AdminPage() {
     { data: recentMessages },
     { data: recentMealLogs },
     { data: tasks },
-    { data: contentItems },
     { data: coachNotes },
     { data: lastCheckIns },
   ] = await Promise.all([
@@ -29,7 +28,6 @@ export default async function AdminPage() {
     admin.from("messages").select("*, profiles(full_name)").eq("role", "user").gte("created_at", cutoff).order("created_at", { ascending: false }).limit(20),
     admin.from("nutrition_logs").select("*, profiles(full_name)").gte("created_at", cutoff).order("created_at", { ascending: false }).limit(20),
     admin.from("admin_tasks").select("*").order("position", { ascending: true }),
-    admin.from("content_calendar").select("*").gte("date", new Date().toISOString().split("T")[0]).order("date", { ascending: true }).limit(14),
     admin.from("coach_notes").select("*").order("created_at", { ascending: false }).limit(10),
     admin.from("check_ins").select("user_id, date, profiles(full_name)").order("date", { ascending: false }).limit(200),
   ]);
@@ -61,7 +59,6 @@ export default async function AdminPage() {
       recentMessages={recentMessages ?? []}
       recentMealLogs={Array.isArray(recentMealLogs) ? recentMealLogs : []}
       tasks={Array.isArray(tasks) ? tasks : []}
-      contentItems={Array.isArray(contentItems) ? contentItems : []}
       coachNotes={Array.isArray(coachNotes) ? coachNotes.filter((n) => !String((n as { tag?: string }).tag ?? "").startsWith("audit:")) : []}
     />
   );

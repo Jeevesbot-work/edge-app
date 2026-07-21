@@ -2,8 +2,8 @@ export default function PendingPage() {
   return (
     <div className="min-h-screen bg-edge-bg flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center space-y-6">
-        <div className="w-16 h-16 rounded-full bg-edge-gold/20 flex items-center justify-center mx-auto">
-          <span className="font-condensed font-black text-2xl text-edge-gold">E</span>
+        <div className="w-16 h-16 rounded-full bg-edge-bronze/20 flex items-center justify-center mx-auto">
+          <span className="font-condensed font-black text-2xl text-edge-bronze">E</span>
         </div>
         <h1 className="font-condensed font-black text-3xl uppercase tracking-wide">
           Application submitted.
@@ -15,7 +15,7 @@ export default function PendingPage() {
           Once approved, you'll receive an email with your access link.
         </p>
         <div className="bg-edge-surface rounded-xl p-4 text-left">
-          <p className="text-edge-gold font-condensed font-bold uppercase tracking-wide text-sm mb-1">
+          <p className="text-edge-bronze font-condensed font-bold uppercase tracking-wide text-sm mb-1">
             What happens next
           </p>
           <ol className="text-white/70 text-sm font-body space-y-1 list-decimal list-inside">

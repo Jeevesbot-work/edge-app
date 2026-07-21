@@ -5,13 +5,14 @@ import Link from "next/link";
 import { LESSONS } from "@/lib/data/lessons";
 
 const AUDIO_LESSONS = [
-  { id: 1, title: "Identity Beats Motivation", duration: "12 min", category: "Identity", file: "/audio/identity-beats-motivation.mp3" },
-  { id: 2, title: "Why Midlife Feels Different", duration: "14 min", category: "Mindset", file: "/audio/why-midlife-feels-different.mp3" },
-  { id: 3, title: "The Back2Strong Code", duration: "10 min", category: "Identity", file: "/audio/back2strong-code.mp3" },
-  { id: 4, title: "Post-40 Playbook", duration: "18 min", category: "Training", file: "/audio/40-plus-playbook.mp3" },
-  { id: 5, title: "Consistency Over Intensity", duration: "11 min", category: "Training", file: "/audio/training-after-40.mp3" },
-  { id: 6, title: "Maximize Recovery", duration: "13 min", category: "Recovery", file: "/audio/maximize-recovery.mp3" },
-  { id: 7, title: "The STRONG Operating System", duration: "15 min", category: "Mindset", file: "/audio/strong-operating-system.mp3" },
+  { id: 1, title: "Identity Beats Motivation", duration: "17 min", category: "Identity", file: "/audio/identity-beats-motivation.mp3" },
+  { id: 2, title: "Why Midlife Feels Different", duration: "13 min", category: "Mindset", file: "/audio/why-midlife-feels-different.mp3" },
+  { id: 3, title: "The Back2Strong Code", duration: "12 min", category: "Identity", file: "/audio/back2strong-code.mp3" },
+  { id: 4, title: "Post-40 Playbook", duration: "14 min", category: "Training", file: "/audio/40-plus-playbook.mp3" },
+  { id: 5, title: "Consistency Over Intensity", duration: "16 min", category: "Training", file: "/audio/training-after-40.mp3" },
+  { id: 6, title: "Maximize Recovery", duration: "16 min", category: "Recovery", file: "/audio/maximize-recovery.mp3" },
+  { id: 7, title: "The STRONG Operating System", duration: "13 min", category: "Mindset", file: "/audio/strong-operating-system.mp3" },
+  { id: 8, title: "Failure Versus Drift", duration: "16 min", category: "Mindset", file: "/audio/failure-versus-drift.m4a" },
 ];
 
 const BREATHWORK = [

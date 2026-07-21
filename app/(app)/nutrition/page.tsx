@@ -1,11 +1,39 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
-import { RECIPES, type Recipe } from "@/lib/recipes";
+import PushOptIn from "@/components/PushOptIn";
+import {
+  type LiveRecipe,
+  type RecipeCategory,
+  RECIPE_COLUMNS,
+  CATEGORY_ORDER,
+  CATEGORY_LABEL,
+  sortRecipes,
+  totalTimeMins,
+} from "@/lib/recipes-live";
+
+// Recipe library palette — branded, typographic, image-free (per Fuel design brief).
+const RECIPE_INK = "#12151C"; // card surface
+const RECIPE_CREAM = "#F4EEE2"; // titles
+const RECIPE_BRASS = "#C9A24B"; // category kickers / accents
+const RECIPE_OXBLOOD = "#4A1E24"; // coach-note card
+
+// Camera scanner is client-only and heavy — load it lazily so it never
+// blocks the Fuel page and only pulls in when a scan actually starts.
+const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), { ssr: false });
+
+interface ScannedProduct {
+  product_name: string;
+  serving_size: string | null;
+  serving_quantity: number | null;
+  per_100g: { calories: number; protein_g: number; carbs_g: number; fat_g: number };
+  per_serving: { calories: number; protein_g: number; carbs_g: number; fat_g: number } | null;
+}
 
 interface NutritionLog {
   id: string;
@@ -24,15 +52,49 @@ const CALORIE_TARGET = 2200;
 export default function NutritionPage() {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<"today" | "cookbook" | "road">("today");
+  const [tab, setTab] = useState<"today" | "recipes" | "road">("today");
   const [logs, setLogs] = useState<NutritionLog[]>([]);
   const [analysing, setAnalysing] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [latest, setLatest] = useState<NutritionLog | null>(null);
   const [error, setError] = useState("");
-  const [openRecipe, setOpenRecipe] = useState<Recipe | null>(null);
+  const [openRecipe, setOpenRecipe] = useState<LiveRecipe | null>(null);
+
+  // Live recipe library (Supabase). Lazily loaded the first time the tab opens.
+  const [recipes, setRecipes] = useState<LiveRecipe[] | null>(null);
+  const [recipesLoading, setRecipesLoading] = useState(false);
+  const [recipesError, setRecipesError] = useState(false);
+
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanned, setScanned] = useState<ScannedProduct | null>(null);
+  const [scanGrams, setScanGrams] = useState(100);
 
   useEffect(() => { loadTodaysLogs(); }, []);
+
+  useEffect(() => {
+    if (tab === "recipes" && recipes === null && !recipesLoading && !recipesError) {
+      loadRecipes();
+    }
+  }, [tab, recipes, recipesLoading, recipesError]);
+
+  async function loadRecipes() {
+    setRecipesLoading(true);
+    setRecipesError(false);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("recipes")
+        .select(RECIPE_COLUMNS)
+        .eq("published", true);
+      if (error) throw error;
+      setRecipes(sortRecipes((data ?? []) as LiveRecipe[]));
+    } catch {
+      setRecipesError(true);
+    } finally {
+      setRecipesLoading(false);
+    }
+  }
 
   async function loadTodaysLogs() {
     const supabase = createClient();
@@ -50,16 +112,17 @@ export default function NutritionPage() {
     if (!file) return;
     setError(""); setLatest(null);
     const reader = new FileReader();
-    reader.onload = () => { const dataUrl = reader.result as string; setPreview(dataUrl); analyseImage(file, dataUrl); };
+    reader.onload = () => { const dataUrl = reader.result as string; setPreview(dataUrl); analyseImage(dataUrl); };
     reader.readAsDataURL(file);
   }
 
-  async function analyseImage(file: File, dataUrl: string) {
+  async function analyseImage(dataUrl: string) {
     setAnalysing(true);
     try {
-      const base64 = await resizeImage(dataUrl, 1024);
-      const mimeType = file.type || "image/jpeg";
-      const res = await fetch("/api/nutrition/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: base64, mimeType }) });
+      const base64 = await resizeImage(dataUrl, 1568);
+      // resizeImage always re-encodes via canvas.toDataURL("image/jpeg", ...), so the
+      // outgoing bytes are JPEG regardless of the source file's original type.
+      const res = await fetch("/api/nutrition/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: base64, mimeType: "image/jpeg" }) });
       if (!res.ok) { const err = await res.json(); setError(err.error || "Analysis failed. Try a clearer photo."); return; }
       const log: NutritionLog = await res.json();
       setLatest(log); setLogs((prev) => [log, ...prev]);
@@ -74,14 +137,76 @@ export default function NutritionPage() {
     if (latest?.id === id) setLatest(null);
   }
 
+  const handleBarcode = useCallback(async (code: string) => {
+    setScannerOpen(false);
+    setScanLoading(true);
+    setError("");
+    setLatest(null);
+    try {
+      const res = await fetch("/api/nutrition/barcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barcode: code }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Lookup failed. Try again."); return; }
+      if (!data.found) { setError("Not in the food database yet. Snap a photo of it instead — that always works."); return; }
+      setScanned(data);
+      // Default portion: the pack's stated serving size if it has one, else 100g.
+      setScanGrams(data.serving_quantity && data.serving_quantity > 0 ? Math.round(data.serving_quantity) : 100);
+    } catch {
+      setError("Something went wrong. Check your connection and try again.");
+    } finally {
+      setScanLoading(false);
+    }
+  }, []);
+
+  async function logScanned() {
+    if (!scanned) return;
+    const factor = scanGrams / 100;
+    const b = scanned.per_100g;
+    const calories = Math.round(b.calories * factor);
+    const protein_g = Math.round(b.protein_g * factor * 10) / 10;
+    const carbs_g = Math.round(b.carbs_g * factor * 10) / 10;
+    const fat_g = Math.round(b.fat_g * factor * 10) / 10;
+
+    const edge_comment =
+      protein_g >= 20 ? "Solid grab. That's real protein doing the work — exactly what we're after."
+      : protein_g >= 10 ? "Decent. A bit more protein alongside it and you're flying."
+      : "Fuel more than protein. Fine now and then — just don't let it be the whole meal.";
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setError("Session expired — reopen the app and try again."); return; }
+
+    const { data: log, error: insErr } = await supabase
+      .from("nutrition_logs")
+      .insert({ user_id: user.id, meal_name: scanned.product_name, calories, protein_g, carbs_g, fat_g, edge_comment })
+      .select()
+      .single();
+
+    if (insErr || !log) { setError("Couldn't save that log. Try again."); return; }
+    setLogs((prev) => [log, ...prev]);
+    setLatest(log);
+    setScanned(null);
+  }
+
+  // Live preview of macros for the chosen portion, before logging.
+  const previewMacros = scanned
+    ? {
+        calories: Math.round(scanned.per_100g.calories * (scanGrams / 100)),
+        protein_g: Math.round(scanned.per_100g.protein_g * (scanGrams / 100) * 10) / 10,
+        carbs_g: Math.round(scanned.per_100g.carbs_g * (scanGrams / 100) * 10) / 10,
+        fat_g: Math.round(scanned.per_100g.fat_g * (scanGrams / 100) * 10) / 10,
+      }
+    : null;
+
   const totalProtein = logs.reduce((s, l) => s + l.protein_g, 0);
   const totalCalories = logs.reduce((s, l) => s + l.calories, 0);
   const totalCarbs = logs.reduce((s, l) => s + l.carbs_g, 0);
   const totalFat = logs.reduce((s, l) => s + l.fat_g, 0);
   const proteinPct = Math.min((totalProtein / PROTEIN_TARGET) * 100, 100);
   const caloriePct = Math.min((totalCalories / CALORIE_TARGET) * 100, 100);
-  const breakfasts = RECIPES.filter((r) => r.section === "breakfast");
-  const mains = RECIPES.filter((r) => r.section === "main");
 
   if (openRecipe) return <RecipeDetail recipe={openRecipe} onBack={() => setOpenRecipe(null)} />;
 
@@ -98,14 +223,14 @@ export default function NutritionPage() {
       </div>
 
       <div className="flex bg-edge-surface rounded-xl p-1 mb-6 border border-white/[0.08]">
-        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Today</button>
-        <button onClick={() => setTab("cookbook")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "cookbook" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>Cookbook</button>
-        <button onClick={() => setTab("road")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "road" ? "bg-edge-gold text-white" : "text-edge-muted"}`}>On The Road</button>
+        <button onClick={() => setTab("today")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "today" ? "bg-edge-bronze text-white" : "text-edge-muted"}`}>Today</button>
+        <button onClick={() => setTab("recipes")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "recipes" ? "bg-edge-bronze text-white" : "text-edge-muted"}`}>Recipes</button>
+        <button onClick={() => setTab("road")} className={`flex-1 py-2 rounded-lg font-condensed font-bold text-xs uppercase tracking-widest transition-all ${tab === "road" ? "bg-edge-bronze text-white" : "text-edge-muted"}`}>On The Road</button>
       </div>
 
       {tab === "today" && (
         <>
-          <button onClick={() => fileRef.current?.click()} disabled={analysing} className="w-full bg-edge-gold rounded-2xl p-5 flex items-center gap-4 mb-6 active:scale-[0.98] transition-transform disabled:opacity-60">
+          <button onClick={() => fileRef.current?.click()} disabled={analysing} className="anim-0 pressable w-full bg-edge-bronze rounded-[20px] p-5 flex items-center gap-4 mb-6 transition-transform disabled:opacity-60">
             <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
               {analysing ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /> : (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6 text-white">
@@ -121,25 +246,72 @@ export default function NutritionPage() {
           </button>
           <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
 
+          <button onClick={() => { setError(""); setScannerOpen(true); }} disabled={analysing || scanLoading} className="anim-1 pressable w-full bg-edge-surface border border-white/[0.08] rounded-[20px] p-4 flex items-center gap-4 mb-6 transition-transform disabled:opacity-60">
+            <div className="w-11 h-11 rounded-xl bg-edge-bronze/10 border border-edge-bronze/20 flex items-center justify-center flex-shrink-0">
+              {scanLoading ? <div className="w-5 h-5 border-2 border-edge-bronze border-t-transparent rounded-full animate-spin" /> : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-edge-bronze">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 5v14M8 5v14M12 5v14M16 5v14M20 5v14" />
+                </svg>
+              )}
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-condensed font-bold text-base uppercase tracking-wide text-white leading-none">{scanLoading ? "Looking it up..." : "Scan Barcode"}</p>
+              <p className="text-edge-muted text-xs mt-0.5">{scanLoading ? "Reading the label" : "Packaged food — exact macros off the label"}</p>
+            </div>
+          </button>
+
+          {scanned && previewMacros && (
+            <div className="mb-6 bg-edge-surface rounded-[20px] border border-edge-bronze/30 overflow-hidden">
+              <div className="bg-edge-bronze/10 px-4 py-3 flex items-center justify-between border-b border-edge-bronze/20">
+                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-bronze">Found it</p>
+                <button onClick={() => setScanned(null)} className="text-edge-muted active:text-white">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+              <div className="p-4">
+                <p className="font-condensed font-bold text-lg text-white mb-1 leading-tight">{scanned.product_name}</p>
+                {scanned.serving_size && <p className="text-edge-muted text-xs mb-4">Pack serving: {scanned.serving_size}</p>}
+
+                <div className="flex items-center gap-3 mb-4">
+                  <button onClick={() => setScanGrams((g) => Math.max(10, g - 10))} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white text-xl leading-none active:bg-white/10">−</button>
+                  <div className="flex-1 text-center">
+                    <input type="number" value={scanGrams} onChange={(e) => setScanGrams(Math.max(1, Math.min(2000, parseInt(e.target.value) || 0)))} className="w-full bg-transparent text-center font-condensed font-black text-2xl text-white outline-none" />
+                    <p className="text-edge-muted text-xs -mt-1">grams</p>
+                  </div>
+                  <button onClick={() => setScanGrams((g) => Math.min(2000, g + 10))} className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white text-xl leading-none active:bg-white/10">+</button>
+                </div>
+
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                  <MacroCell label="Cal" value={previewMacros.calories} unit="" highlight />
+                  <MacroCell label="Protein" value={previewMacros.protein_g} unit="g" />
+                  <MacroCell label="Carbs" value={previewMacros.carbs_g} unit="g" />
+                  <MacroCell label="Fat" value={previewMacros.fat_g} unit="g" />
+                </div>
+
+                <button onClick={logScanned} className="pressable w-full bg-edge-bronze rounded-xl py-3 font-condensed font-bold text-sm uppercase tracking-widest text-white transition-transform">Log It</button>
+              </div>
+            </div>
+          )}
+
           {preview && analysing && (
             <div className="mb-6 rounded-2xl overflow-hidden border border-white/10 relative">
               <img src={preview} alt="Meal preview" className="w-full object-cover max-h-48" />
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="w-8 h-8 border-2 border-edge-gold border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <div className="w-8 h-8 border-2 border-edge-bronze border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                   <p className="text-white text-sm font-condensed font-bold uppercase tracking-wide">Reading your plate...</p>
                 </div>
               </div>
             </div>
           )}
 
-          {error && <div className="mb-6 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-4"><p className="text-edge-gold text-sm">{error}</p></div>}
+          {error && <div className="mb-6 bg-edge-red/10 border border-edge-red/30 rounded-xl p-4"><p className="text-edge-red text-sm">{error}</p></div>}
 
           {latest && !analysing && (
-            <div className="mb-6 bg-edge-surface rounded-2xl border border-edge-gold/30 overflow-hidden">
-              <div className="bg-edge-gold/10 px-4 py-3 flex items-center gap-2 border-b border-edge-gold/20">
-                <div className="w-6 h-6 rounded-full bg-edge-gold flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-xs text-edge-bg">E</span></div>
-                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold">Edge says</p>
+            <div className="mb-6 bg-edge-surface rounded-[20px] border border-edge-bronze/30 overflow-hidden">
+              <div className="bg-edge-bronze/10 px-4 py-3 flex items-center gap-2 border-b border-edge-bronze/20">
+                <div className="w-6 h-6 rounded-full bg-edge-bronze flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-xs text-edge-bg">E</span></div>
+                <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-bronze">Edge says</p>
               </div>
               <div className="p-4">
                 <p className="font-condensed font-bold text-lg text-white mb-1">{latest.meal_name}</p>
@@ -154,8 +326,13 @@ export default function NutritionPage() {
             </div>
           )}
 
+          {/* Push opt-in appears only after the client has logged a meal — a
+              natural moment, never on first app open. Self-hides if unsupported
+              or already handled. */}
+          <PushOptIn show={logs.length > 0} />
+
           {logs.length > 0 && (
-            <div className="bg-edge-surface rounded-xl p-4 border border-white/[0.08] mb-6">
+            <div className="anim-2 bg-edge-surface rounded-[20px] p-4 border border-white/[0.08] mb-6">
               <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Today's Totals</p>
               <div className="mb-4">
                 <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Protein</span><span className="text-edge-muted text-xs">{Math.round(totalProtein)}g / {PROTEIN_TARGET}g</span></div>
@@ -163,7 +340,7 @@ export default function NutritionPage() {
               </div>
               <div className="mb-4">
                 <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Calories</span><span className="text-edge-muted text-xs">{Math.round(totalCalories)} / {CALORIE_TARGET}</span></div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-edge-gold rounded-full transition-all" style={{ width: `${caloriePct}%` }} /></div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-edge-bronze rounded-full transition-all" style={{ width: `${caloriePct}%` }} /></div>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
                 <div className="text-center"><p className="font-condensed font-bold text-lg text-white">{Math.round(totalProtein)}g</p><p className="text-edge-muted text-xs">Protein</p></div>
@@ -174,7 +351,7 @@ export default function NutritionPage() {
           )}
 
           {logs.length > 0 && (
-            <div className="mb-6">
+            <div className="anim-3 mb-6">
               <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">Today's Meals</p>
               <div className="space-y-3">
                 {logs.map((log) => (
@@ -187,7 +364,7 @@ export default function NutritionPage() {
                     </div>
                     <div className="flex gap-4">
                       <span className="text-edge-muted text-xs">{log.calories} cal</span>
-                      <span className="text-edge-gold text-xs">{log.protein_g}g protein</span>
+                      <span className="text-edge-bronze text-xs">{log.protein_g}g protein</span>
                       <span className="text-edge-muted text-xs">{log.carbs_g}g carbs</span>
                       <span className="text-edge-muted text-xs">{log.fat_g}g fat</span>
                     </div>
@@ -201,8 +378,8 @@ export default function NutritionPage() {
           {logs.length === 0 && !analysing && <div className="text-center py-8 mb-6"><p className="text-edge-muted text-sm">No meals logged today. Snap your first one.</p></div>}
 
           <Link href="/edge">
-            <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/30 flex items-center gap-4 mb-6 active:bg-white/5">
-              <div className="w-10 h-10 rounded-full bg-edge-gold flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-sm text-edge-bg">E</span></div>
+            <div className="anim-4 pressable bg-edge-surface rounded-xl p-4 border border-edge-bronze/30 flex items-center gap-4 mb-6">
+              <div className="w-10 h-10 rounded-full bg-edge-bronze flex items-center justify-center flex-shrink-0"><span className="font-condensed font-black text-sm text-edge-bg">E</span></div>
               <div className="flex-1"><p className="font-condensed font-bold text-sm uppercase tracking-wide">Ask Edge</p><p className="text-edge-muted text-xs">Pre-workout meals, travel food, what to eat on rest days...</p></div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </div>
@@ -210,99 +387,238 @@ export default function NutritionPage() {
         </>
       )}
 
-      {tab === "cookbook" && (
-        <div>
-          <p className="text-edge-muted text-xs leading-relaxed mb-6">13 high-protein meals built for men who train. Protein first — that is the number that matters.</p>
-          <RecipeSection title="Breakfast" recipes={breakfasts} onOpen={setOpenRecipe} />
-          <RecipeSection title="Mains" recipes={mains} onOpen={setOpenRecipe} />
-        </div>
+      {tab === "recipes" && (
+        <RecipeLibrary
+          recipes={recipes}
+          loading={recipesLoading}
+          error={recipesError}
+          onRetry={loadRecipes}
+          onOpen={setOpenRecipe}
+        />
       )}
 
       {tab === "road" && <FuelOnTheRoad />}
+
+      {scannerOpen && <BarcodeScanner onDetected={handleBarcode} onClose={() => setScannerOpen(false)} />}
     </div>
   );
 }
 
-function RecipeSection({ title, recipes, onOpen }: { title: string; recipes: Recipe[]; onOpen: (r: Recipe) => void }) {
-  return (
-    <div className="mb-8">
-      <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-3">{title}</p>
-      <div className="space-y-2">
-        {recipes.map((recipe) => (
-          <button key={recipe.id} onClick={() => onOpen(recipe)} className="w-full bg-edge-surface rounded-xl p-4 border border-white/[0.08] flex items-center gap-4 active:bg-white/5 text-left">
-            <div className="flex-1 min-w-0">
-              <p className="font-display font-semibold text-base text-white leading-snug">{recipe.title}</p>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="font-condensed font-black text-base text-edge-gold">{recipe.macros_per_serving.protein_g}g</span>
-                <span className="text-edge-muted text-xs">protein</span>
-                <span className="text-white/30 text-xs">·</span>
-                <span className="text-edge-muted text-xs">{recipe.macros_per_serving.calories} kcal</span>
-                <span className="text-white/30 text-xs">·</span>
-                <span className="text-edge-muted text-xs">serves {recipe.serves}</span>
-              </div>
-            </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-          </button>
-        ))}
+function RecipeLibrary({
+  recipes,
+  loading,
+  error,
+  onRetry,
+  onOpen,
+}: {
+  recipes: LiveRecipe[] | null;
+  loading: boolean;
+  error: boolean;
+  onRetry: () => void;
+  onOpen: (r: LiveRecipe) => void;
+}) {
+  if (loading || recipes === null) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-edge-bronze border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-edge-muted text-sm">Loading recipes…</p>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-white/80 text-sm mb-1">Couldn&apos;t load the recipes.</p>
+        <p className="text-edge-muted text-xs mb-5">Check your connection and try again.</p>
+        <button
+          onClick={onRetry}
+          className="font-condensed font-bold text-xs uppercase tracking-widest px-5 py-2.5 rounded-lg"
+          style={{ backgroundColor: RECIPE_BRASS, color: RECIPE_INK }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (recipes.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-white/80 text-sm mb-1">No recipes yet.</p>
+        <p className="text-edge-muted text-xs">New recipes will show up here as they&apos;re added.</p>
+      </div>
+    );
+  }
+
+  const groups = CATEGORY_ORDER
+    .map((category) => ({ category, items: recipes.filter((r) => r.category === category) }))
+    .filter((g) => g.items.length > 0);
+
+  return (
+    <div>
+      <p className="text-edge-muted text-xs leading-relaxed mb-6">
+        High-protein recipes built for men who train. Protein first — that&apos;s the number that matters.
+      </p>
+      {groups.map((group, gi) => (
+        <div key={group.category} className={`mb-8 anim-${Math.min(gi, 4)}`}>
+          <p
+            className="font-condensed font-bold text-xs uppercase tracking-[0.2em] mb-3"
+            style={{ color: RECIPE_BRASS }}
+          >
+            {CATEGORY_LABEL[group.category]}
+          </p>
+          <div className="space-y-2">
+            {group.items.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} onOpen={onOpen} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-function RecipeDetail({ recipe, onBack }: { recipe: Recipe; onBack: () => void }) {
+function RecipeCard({ recipe, onOpen }: { recipe: LiveRecipe; onOpen: (r: LiveRecipe) => void }) {
+  const time = totalTimeMins(recipe);
+  return (
+    <button
+      onClick={() => onOpen(recipe)}
+      className="pressable w-full rounded-2xl p-4 border border-white/[0.06] flex items-center gap-4 text-left"
+      style={{ backgroundColor: RECIPE_INK }}
+    >
+      <div className="flex-1 min-w-0">
+        <p
+          className="font-condensed font-bold text-[10px] uppercase tracking-[0.22em] mb-1.5"
+          style={{ color: RECIPE_BRASS }}
+        >
+          {CATEGORY_LABEL[recipe.category]}
+        </p>
+        <p
+          className="font-display font-semibold text-lg leading-snug"
+          style={{ color: RECIPE_CREAM }}
+        >
+          {recipe.title}
+        </p>
+        {recipe.description && (
+          <p className="text-edge-secondary text-xs leading-relaxed mt-1 line-clamp-1">{recipe.description}</p>
+        )}
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          {recipe.calories != null && <MetaChip>{recipe.calories} kcal</MetaChip>}
+          {recipe.protein_g != null && <MetaChip accent>{recipe.protein_g}g protein</MetaChip>}
+          {time > 0 && <MetaChip>{time} min</MetaChip>}
+        </div>
+      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-edge-muted flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+    </button>
+  );
+}
+
+function MetaChip({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
+  return (
+    <span
+      className="font-condensed font-bold text-[11px] uppercase tracking-wide px-2 py-0.5 rounded-md"
+      style={
+        accent
+          ? { color: RECIPE_BRASS, backgroundColor: "rgba(201,162,75,0.12)" }
+          : { color: "#9BA3AF", backgroundColor: "rgba(255,255,255,0.05)" }
+      }
+    >
+      {children}
+    </span>
+  );
+}
+
+function RecipeDetail({ recipe, onBack }: { recipe: LiveRecipe; onBack: () => void }) {
+  const time = totalTimeMins(recipe);
+  const metaBits = [
+    recipe.servings != null ? `Serves ${recipe.servings}` : null,
+    recipe.prep_time_mins ? `${recipe.prep_time_mins} min prep` : null,
+    recipe.cook_time_mins ? `${recipe.cook_time_mins} min cook` : null,
+    !recipe.prep_time_mins && !recipe.cook_time_mins && time > 0 ? `${time} min` : null,
+  ].filter(Boolean) as string[];
+
   return (
     <div className="min-h-screen bg-edge-bg max-w-lg mx-auto px-4 pt-safe pb-24">
       <div className="flex items-center gap-3 py-4 mb-6">
         <button onClick={onBack} className="w-9 h-9 rounded-xl bg-edge-surface border border-white/10 flex items-center justify-center flex-shrink-0">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-white"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
         </button>
-        <p className="text-edge-muted text-xs font-condensed uppercase tracking-widest">{recipe.section === "breakfast" ? "Breakfast" : "Mains"}</p>
+        <p className="font-condensed font-bold text-xs uppercase tracking-[0.2em]" style={{ color: RECIPE_BRASS }}>
+          {CATEGORY_LABEL[recipe.category]}
+        </p>
       </div>
-      <h1 className="font-display font-semibold text-4xl leading-tight text-white mb-6">{recipe.title}</h1>
-      <div className="grid grid-cols-4 gap-2 mb-4">
-        <div className="col-span-1 bg-edge-gold/10 border border-edge-gold/30 rounded-xl p-3 text-center">
-          <p className="font-condensed font-black text-2xl text-edge-gold leading-none">{recipe.macros_per_serving.protein_g}g</p>
-          <p className="text-edge-gold/70 text-xs mt-1">protein</p>
-        </div>
-        <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.calories}</p><p className="text-edge-muted text-xs mt-1">kcal</p></div>
-        <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.carbs_g}g</p><p className="text-edge-muted text-xs mt-1">carbs</p></div>
-        <div className="bg-edge-surface border border-white/[0.08] rounded-xl p-3 text-center"><p className="font-condensed font-bold text-lg text-white leading-none">{recipe.macros_per_serving.fat_g}g</p><p className="text-edge-muted text-xs mt-1">fat</p></div>
+
+      <h1 className="font-display font-semibold text-4xl leading-tight mb-3" style={{ color: RECIPE_CREAM }}>{recipe.title}</h1>
+      {recipe.description && <p className="text-edge-secondary text-sm leading-relaxed mb-6">{recipe.description}</p>}
+
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        <MacroStat value={recipe.calories} label="kcal" />
+        <MacroStat value={recipe.protein_g} label="protein" unit="g" accent />
+        <MacroStat value={recipe.carbs_g} label="carbs" unit="g" />
+        <MacroStat value={recipe.fat_g} label="fat" unit="g" />
       </div>
-      <p className="text-edge-muted text-xs mb-8">Per serving · estimated · serves {recipe.serves}</p>
-      <div className="mb-8">
-        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Ingredients</p>
-        <div className="space-y-5">
-          {recipe.ingredient_groups.map((group, gi) => (
-            <div key={gi}>
-              {group.heading && <p className="font-condensed font-bold text-xs uppercase tracking-widest text-white/60 mb-2">{group.heading}</p>}
-              <ul className="space-y-2">
-                {group.items.map((item, ii) => (
-                  <li key={ii} className="flex items-start gap-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-edge-gold flex-shrink-0 mt-2" />
-                    <span className="text-white/80 text-sm leading-relaxed">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="mb-8">
-        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Method</p>
-        <ol className="space-y-4">
-          {recipe.steps.map((step, i) => (
-            <li key={i} className="flex items-start gap-4">
-              <span className="font-condensed font-black text-base text-edge-gold flex-shrink-0 w-5 text-right leading-relaxed">{i + 1}</span>
-              <span className="text-white/80 text-sm leading-relaxed">{step}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-      {recipe.note && (
-        <div className="bg-edge-surface border-l-2 border-edge-gold/60 rounded-r-xl px-4 py-3 mb-8">
-          <p className="text-white/70 text-xs leading-relaxed"><span className="font-bold text-edge-gold">Note — </span>{recipe.note}</p>
+      <p className="text-edge-muted text-xs mb-8">Per serving{metaBits.length > 0 ? ` · ${metaBits.join(" · ")}` : ""}</p>
+
+      {recipe.ingredients.length > 0 && (
+        <div className="mb-8">
+          <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Ingredients</p>
+          <ul className="space-y-2">
+            {recipe.ingredients.map((item, ii) => (
+              <li key={ii} className="flex items-start gap-3">
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-2" style={{ backgroundColor: RECIPE_BRASS }} />
+                <span className="text-white/80 text-sm leading-relaxed">{item}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
+
+      {recipe.method.length > 0 && (
+        <div className="mb-8">
+          <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Method</p>
+          <ol className="space-y-4">
+            {recipe.method.map((step, i) => (
+              <li key={i} className="flex items-start gap-4">
+                <span className="font-condensed font-black text-base flex-shrink-0 w-5 text-right leading-relaxed" style={{ color: RECIPE_BRASS }}>{i + 1}</span>
+                <span className="text-white/80 text-sm leading-relaxed">{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {recipe.coach_note && (
+        <div className="rounded-2xl px-5 py-4 mb-8" style={{ backgroundColor: RECIPE_OXBLOOD }}>
+          <p className="font-condensed font-bold text-xs uppercase tracking-[0.2em] mb-2" style={{ color: RECIPE_BRASS }}>Coach Note</p>
+          <p className="font-display italic text-sm leading-relaxed" style={{ color: RECIPE_CREAM }}>{recipe.coach_note}</p>
+        </div>
+      )}
+
+      {recipe.tags && recipe.tags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-8">
+          {recipe.tags.map((tag) => (
+            <span key={tag} className="font-condensed font-bold text-[11px] uppercase tracking-wide px-2.5 py-1 rounded-md" style={{ color: "#9BA3AF", backgroundColor: "rgba(255,255,255,0.05)" }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MacroStat({ value, label, unit, accent }: { value: number | null; label: string; unit?: string; accent?: boolean }) {
+  const display = value != null ? `${value}${unit ?? ""}` : "—";
+  return (
+    <div
+      className="rounded-xl p-3 text-center border"
+      style={accent
+        ? { backgroundColor: "rgba(201,162,75,0.1)", borderColor: "rgba(201,162,75,0.3)" }
+        : { backgroundColor: RECIPE_INK, borderColor: "rgba(255,255,255,0.06)" }}
+    >
+      <p className="font-condensed font-black text-lg leading-none" style={{ color: accent ? RECIPE_BRASS : RECIPE_CREAM }}>{display}</p>
+      <p className="text-xs mt-1" style={{ color: accent ? "rgba(201,162,75,0.7)" : "#3D434D" }}>{label}</p>
     </div>
   );
 }
@@ -335,8 +651,8 @@ function FuelOnTheRoad() {
     <div>
       <p className="text-edge-muted text-xs leading-relaxed mb-6">Protein when you're out and about. Quick, clean grabs that fill you up without blowing the day's calories. Chase high protein, low calories — that's the game.</p>
 
-      <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/30 mb-6">
-        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-gold mb-1">The Dream Grab</p>
+      <div className="bg-edge-surface rounded-[20px] p-4 border border-edge-bronze/30 mb-6">
+        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-bronze mb-1">The Dream Grab</p>
         <p className="text-white font-display text-lg leading-snug">Prawns + plain skyr</p>
         <p className="text-edge-muted text-xs mt-1">~40g protein · under 220 kcal · nothing on the road beats it</p>
       </div>
@@ -393,7 +709,7 @@ function FuelOnTheRoad() {
             <div className="space-y-2">
               <div><span className="text-emerald-400 text-xs font-condensed font-bold uppercase tracking-wide">Go </span><span className="text-white/70 text-xs">{v.go}</span></div>
               <div><span className="text-red-400 text-xs font-condensed font-bold uppercase tracking-wide">Dodge </span><span className="text-white/70 text-xs">{v.dodge}</span></div>
-              <div className="mt-2 bg-edge-gold/10 rounded-lg px-3 py-2 border border-edge-gold/20"><p className="text-edge-gold text-xs font-condensed font-bold">{v.best}</p></div>
+              <div className="mt-2 bg-edge-bronze/10 rounded-lg px-3 py-2 border border-edge-bronze/20"><p className="text-edge-bronze text-xs font-condensed font-bold">{v.best}</p></div>
             </div>
           </div>
         ))}
@@ -404,15 +720,15 @@ function FuelOnTheRoad() {
 
 function MacroCell({ label, value, unit, highlight }: { label: string; value: number; unit: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-xl p-2 text-center ${highlight ? "bg-edge-gold/10 border border-edge-gold/20" : "bg-white/5"}`}>
-      <p className={`font-condensed font-bold text-lg leading-none ${highlight ? "text-edge-gold" : "text-white"}`}>{Math.round(value)}{unit}</p>
+    <div className={`rounded-xl p-2 text-center ${highlight ? "bg-edge-bronze/10 border border-edge-bronze/20" : "bg-white/5"}`}>
+      <p className={`font-condensed font-bold text-lg leading-none ${highlight ? "text-edge-bronze" : "text-white"}`}>{Math.round(value)}{unit}</p>
       <p className="text-edge-muted text-xs mt-0.5">{label}</p>
     </div>
   );
 }
 
 async function resizeImage(dataUrl: string, maxPx: number): Promise<string> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
       const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
@@ -423,6 +739,7 @@ async function resizeImage(dataUrl: string, maxPx: number): Promise<string> {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL("image/jpeg", 0.82).split(",")[1]);
     };
+    img.onerror = () => reject(new Error("Could not read that image."));
     img.src = dataUrl;
   });
 }

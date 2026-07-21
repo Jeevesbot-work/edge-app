@@ -45,7 +45,7 @@ export default function WeeklyReviewPage() {
       </div>
 
       <div className="h-1 bg-white/10 mb-8">
-        <div className="h-full bg-edge-gold transition-all" style={{ width: `${((step + 1) / 3) * 100}%` }} />
+        <div className="h-full bg-edge-bronze transition-all" style={{ width: `${((step + 1) / 3) * 100}%` }} />
       </div>
 
       <div className="flex-1 flex flex-col justify-between">
@@ -57,7 +57,7 @@ export default function WeeklyReviewPage() {
             placeholder={q.placeholder}
             rows={6}
             autoFocus
-            className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-gold resize-none"
+            className="w-full bg-edge-surface border border-white/10 rounded-xl px-4 py-4 text-white font-body placeholder:text-edge-muted focus:outline-none focus:border-edge-bronze resize-none"
           />
         </div>
 
@@ -65,7 +65,7 @@ export default function WeeklyReviewPage() {
           {step < 2 ? (
             <button
               onClick={() => setStep((s) => s + 1)}
-              className="w-full bg-edge-gold text-edge-bg font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95"
+              className="w-full bg-edge-bronze text-edge-bg font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl active:scale-95"
             >
               Next
             </button>
@@ -73,7 +73,7 @@ export default function WeeklyReviewPage() {
             <button
               onClick={finish}
               disabled={saving}
-              className="w-full bg-edge-gold text-edge-bg font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95"
+              className="w-full bg-edge-bronze text-edge-bg font-condensed font-bold text-xl uppercase tracking-widest py-4 rounded-xl disabled:opacity-50 active:scale-95"
             >
               {saving ? "Saving..." : "Submit Review"}
             </button>

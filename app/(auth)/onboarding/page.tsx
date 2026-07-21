@@ -115,7 +115,7 @@ export default function OnboardingPage() {
         {current === "intro" && (
           <div className="flex-1 flex flex-col justify-center">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-edge-gold mb-6">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-edge-bronze mb-6">
                 <span className="font-condensed font-black text-xl text-edge-bg tracking-wider">E</span>
               </div>
               <h1 className="font-condensed font-black text-4xl text-white uppercase tracking-wide leading-tight mb-4">
@@ -387,7 +387,7 @@ export default function OnboardingPage() {
         {current === "ready" && (
           <div className="flex-1 flex flex-col justify-center">
             <div className="mb-8">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-edge-gold mb-6">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-edge-bronze mb-6">
                 <span className="font-condensed font-black text-xl text-edge-bg">E</span>
               </div>
               <h2 className="font-condensed font-black text-4xl uppercase tracking-wide mb-4 leading-tight">

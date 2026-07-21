@@ -209,8 +209,8 @@ export default function ProfilePage() {
       </div>
 
       {/* Brand lines */}
-      <div className="bg-edge-surface rounded-xl p-4 border border-edge-gold/20 mb-6">
-        <p className="text-edge-gold font-condensed font-bold text-sm italic">
+      <div className="bg-edge-surface rounded-xl p-4 border border-edge-bronze/20 mb-6">
+        <p className="text-edge-bronze font-condensed font-bold text-sm italic">
           "You're still that man. You're just buried."
         </p>
       </div>
