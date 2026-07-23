@@ -46,8 +46,16 @@ interface NutritionLog {
   created_at: string;
 }
 
-const PROTEIN_TARGET = 160;
-const CALORIE_TARGET = 2200;
+// Sensible fallbacks — the client's own targets (profiles.protein_target /
+// calorie_target) override these once loaded.
+const DEFAULT_PROTEIN_TARGET = 160;
+const DEFAULT_CALORIE_TARGET = 2200;
+
+interface DayTotal {
+  date: string;
+  protein: number;
+  calories: number;
+}
 
 export default function NutritionPage() {
   const router = useRouter();
@@ -70,7 +78,44 @@ export default function NutritionPage() {
   const [scanned, setScanned] = useState<ScannedProduct | null>(null);
   const [scanGrams, setScanGrams] = useState(100);
 
-  useEffect(() => { loadTodaysLogs(); }, []);
+  // Per-client targets (default until the profile loads) + last-7-days history.
+  const [proteinTarget, setProteinTarget] = useState(DEFAULT_PROTEIN_TARGET);
+  const [calorieTarget, setCalorieTarget] = useState(DEFAULT_CALORIE_TARGET);
+  const [week, setWeek] = useState<DayTotal[]>([]);
+
+  useEffect(() => { loadTodaysLogs(); loadTargetsAndWeek(); }, []);
+
+  async function loadTargetsAndWeek() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Client's own protein/calorie targets (fall back to defaults if unset).
+    const { data: profile } = await supabase
+      .from("profiles").select("protein_target, calorie_target").eq("id", user.id).single();
+    if (profile?.protein_target && profile.protein_target > 0) setProteinTarget(profile.protein_target);
+    if (profile?.calorie_target && profile.calorie_target > 0) setCalorieTarget(profile.calorie_target);
+
+    // Last 7 days of logs, collated per day for the weekly summary.
+    const since = new Date();
+    since.setDate(since.getDate() - 6);
+    const sinceStr = since.toISOString().split("T")[0];
+    const { data: rows } = await supabase
+      .from("nutrition_logs").select("date, protein_g, calories")
+      .eq("user_id", user.id).gte("date", sinceStr);
+
+    const byDay = new Map<string, DayTotal>();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const key = d.toISOString().split("T")[0];
+      byDay.set(key, { date: key, protein: 0, calories: 0 });
+    }
+    for (const r of rows ?? []) {
+      const day = byDay.get(r.date as string);
+      if (day) { day.protein += Number(r.protein_g) || 0; day.calories += Number(r.calories) || 0; }
+    }
+    setWeek(Array.from(byDay.values()));
+  }
 
   useEffect(() => {
     if (tab === "recipes" && recipes === null && !recipesLoading && !recipesError) {
@@ -205,8 +250,8 @@ export default function NutritionPage() {
   const totalCalories = logs.reduce((s, l) => s + l.calories, 0);
   const totalCarbs = logs.reduce((s, l) => s + l.carbs_g, 0);
   const totalFat = logs.reduce((s, l) => s + l.fat_g, 0);
-  const proteinPct = Math.min((totalProtein / PROTEIN_TARGET) * 100, 100);
-  const caloriePct = Math.min((totalCalories / CALORIE_TARGET) * 100, 100);
+  const proteinPct = Math.min((totalProtein / proteinTarget) * 100, 100);
+  const caloriePct = Math.min((totalCalories / calorieTarget) * 100, 100);
 
   if (openRecipe) return <RecipeDetail recipe={openRecipe} onBack={() => setOpenRecipe(null)} />;
 
@@ -335,11 +380,11 @@ export default function NutritionPage() {
             <div className="anim-2 bg-edge-surface rounded-[20px] p-4 border border-white/[0.08] mb-6">
               <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted mb-4">Today's Totals</p>
               <div className="mb-4">
-                <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Protein</span><span className="text-edge-muted text-xs">{Math.round(totalProtein)}g / {PROTEIN_TARGET}g</span></div>
-                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${proteinPct}%`, backgroundColor: totalProtein >= PROTEIN_TARGET ? "#10B981" : "#F5A623" }} /></div>
+                <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Protein</span><span className="text-edge-muted text-xs">{Math.round(totalProtein)}g / {proteinTarget}g</span></div>
+                <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${proteinPct}%`, backgroundColor: totalProtein >= proteinTarget ? "#10B981" : "#F5A623" }} /></div>
               </div>
               <div className="mb-4">
-                <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Calories</span><span className="text-edge-muted text-xs">{Math.round(totalCalories)} / {CALORIE_TARGET}</span></div>
+                <div className="flex justify-between mb-1"><span className="text-white text-sm font-condensed font-bold">Calories</span><span className="text-edge-muted text-xs">{Math.round(totalCalories)} / {calorieTarget}</span></div>
                 <div className="h-2 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-edge-bronze rounded-full transition-all" style={{ width: `${caloriePct}%` }} /></div>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
@@ -349,6 +394,8 @@ export default function NutritionPage() {
               </div>
             </div>
           )}
+
+          <WeekSummary week={week} proteinTarget={proteinTarget} />
 
           {logs.length > 0 && (
             <div className="anim-3 mb-6">
@@ -713,6 +760,49 @@ function FuelOnTheRoad() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function WeekSummary({ week, proteinTarget }: { week: DayTotal[]; proteinTarget: number }) {
+  // Only show once there's at least one day with logged protein.
+  const daysLogged = week.filter((d) => d.protein > 0);
+  if (daysLogged.length === 0) return null;
+
+  const daysHit = week.filter((d) => d.protein >= proteinTarget).length;
+  const avgProtein = Math.round(daysLogged.reduce((s, d) => s + d.protein, 0) / daysLogged.length);
+  const maxProtein = Math.max(proteinTarget, ...week.map((d) => d.protein));
+  const dayLetters = ["S", "M", "T", "W", "T", "F", "S"];
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  return (
+    <div className="anim-3 bg-edge-surface rounded-[20px] p-4 border border-white/[0.08] mb-6">
+      <div className="flex items-baseline justify-between mb-4">
+        <p className="font-condensed font-bold text-xs uppercase tracking-widest text-edge-muted">This Week · Protein</p>
+        <p className="text-edge-muted text-xs">{daysHit}/7 days hit</p>
+      </div>
+      <div className="flex items-end justify-between gap-2 h-24 mb-2">
+        {week.map((d) => {
+          const hit = d.protein >= proteinTarget;
+          const h = Math.max(4, Math.round((d.protein / maxProtein) * 88));
+          const isToday = d.date === todayStr;
+          const dow = new Date(d.date + "T00:00:00").getDay();
+          return (
+            <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1.5 h-full">
+              <div className="w-full rounded-md transition-all" style={{
+                height: `${h}px`,
+                backgroundColor: d.protein === 0 ? "rgba(255,255,255,0.06)" : hit ? "#10B981" : "#C8965A",
+                opacity: isToday ? 1 : 0.85,
+              }} />
+              <span className={`text-[10px] ${isToday ? "text-white font-bold" : "text-edge-muted"}`}>{dayLetters[dow]}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex justify-between pt-3 border-t border-white/10">
+        <div><span className="font-condensed font-bold text-lg text-white">{avgProtein}g</span><span className="text-edge-muted text-xs ml-1.5">daily avg</span></div>
+        <div className="text-right"><span className="font-condensed font-bold text-lg" style={{ color: "#10B981" }}>{daysHit}</span><span className="text-edge-muted text-xs ml-1.5">on target</span></div>
       </div>
     </div>
   );

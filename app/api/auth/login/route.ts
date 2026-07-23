@@ -20,7 +20,11 @@ export async function POST(req: NextRequest) {
   });
 
   if (error || !data?.properties?.action_link) {
-    return NextResponse.json({ error: error?.message ?? "Failed to generate link" }, { status: 500 });
+    console.error("[auth/login] generateLink failed:", error?.message);
+    return NextResponse.json(
+      { error: "Couldn't start your sign-in. Try again in a moment, or message Nick if it keeps happening." },
+      { status: 500 }
+    );
   }
 
   // Build a token_hash verification link (PKCE-independent). Server-generated
@@ -54,7 +58,13 @@ export async function POST(req: NextRequest) {
 
   if (!resendRes.ok) {
     const err = await resendRes.json().catch(() => ({}));
-    return NextResponse.json({ error: err.message ?? "Failed to send email" }, { status: 500 });
+    // Log the real provider error server-side; never surface raw email-provider
+    // messages (e.g. "API key is invalid") to the person signing in.
+    console.error("[auth/login] email send failed:", resendRes.status, err?.message);
+    return NextResponse.json(
+      { error: "Couldn't send your sign-in link right now. Please try again in a moment." },
+      { status: 502 }
+    );
   }
 
   return NextResponse.json({ success: true });
