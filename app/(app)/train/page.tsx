@@ -3,6 +3,7 @@ import { getClientProgramme, getProgrammeWeek, blockSessionKeys } from "@/lib/da
 import { BARRY_PROGRAMME } from "@/lib/data/barry-programme";
 import SessionCards from "@/components/SessionCards";
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 const DAY_TO_JS: Record<string, number> = {
   Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
@@ -96,6 +97,18 @@ export default async function TrainPage() {
             />
           ))}
         </div>
+        <Link href="/moves" style={{ textDecoration: "none" }}>
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 10, background: "#171B21", border: "1px solid #252A32", borderRadius: 14, padding: "12px 16px" }}>
+            <span style={{ fontSize: 18 }}>🎬</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: 13, fontWeight: 600, color: "#F2F1ED" }}>Moves library</p>
+              <p style={{ fontFamily: "Inter, sans-serif", fontSize: 11, color: "#9BA3AF" }}>Coached exercises with demos</p>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3D434D" strokeWidth={2} style={{ width: 16, height: 16 }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </Link>
       </div>
 
       {/* ── Current week card ── */}
