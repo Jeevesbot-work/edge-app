@@ -66,13 +66,24 @@ export default async function HomePage() {
     { data: todayCheckin },
     { data: recentSessions },
     { data: lastMessage },
+    { data: todayFuel },
   ] = await Promise.all([
     db.from("profiles").select("*").eq("id", targetId).single(),
     db.from("programme_state").select("*").eq("user_id", targetId).single(),
     db.from("check_ins").select("*").eq("user_id", targetId).eq("date", today).single(),
     db.from("training_sessions").select("session_type, completed_at").eq("user_id", targetId).not("completed_at", "is", null).order("completed_at", { ascending: false }).limit(7),
     db.from("messages").select("content").eq("user_id", targetId).eq("role", "assistant").order("created_at", { ascending: false }).limit(1),
+    db.from("nutrition_logs").select("protein_g, calories").eq("user_id", targetId).eq("date", today),
   ]);
+
+  // Today's fuel — collated from the meals the client has logged so far today.
+  const proteinTarget = (profile?.protein_target && profile.protein_target > 0) ? profile.protein_target : 160;
+  const calorieTarget = (profile?.calorie_target && profile.calorie_target > 0) ? profile.calorie_target : 2200;
+  const fuelProtein = Math.round((todayFuel ?? []).reduce((s, l) => s + (Number(l.protein_g) || 0), 0));
+  const fuelCalories = Math.round((todayFuel ?? []).reduce((s, l) => s + (Number(l.calories) || 0), 0));
+  const fuelLogged = (todayFuel?.length ?? 0) > 0;
+  const proteinPct = Math.min((fuelProtein / proteinTarget) * 100, 100);
+  const proteinHit = fuelProtein >= proteinTarget;
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
   const currentDay = programme?.current_day ?? 1;
@@ -277,6 +288,47 @@ export default async function HomePage() {
               <p style={{ fontSize: 13, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginTop: 4 }}>Rest. Come back Monday.</p>
             </div>
           )}
+        </div>
+
+        {/* Today's fuel — protein-first snapshot, links to the Fuel tab */}
+        <div className="anim-2">
+          <Link href="/nutrition" className="block pressable">
+            <div style={{ background: "#171B21", borderRadius: 20, border: "1px solid #252A32", padding: "18px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <span style={{ fontSize: 9, color: "#C8965A", textTransform: "uppercase", letterSpacing: "0.2em", fontFamily: "Inter, sans-serif" }}>
+                  Today&apos;s fuel
+                </span>
+                {fuelLogged && (
+                  <span style={{ fontSize: 11, color: proteinHit ? "#34D399" : "#9BA3AF", fontFamily: "Inter, sans-serif" }}>
+                    {proteinHit ? "Protein hit ✓" : `${Math.max(proteinTarget - fuelProtein, 0)}g to go`}
+                  </span>
+                )}
+              </div>
+
+              {fuelLogged ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 8 }}>
+                    <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 28, color: "#F2F1ED", fontWeight: 400, lineHeight: 1 }}>
+                      {fuelProtein}<span style={{ fontSize: 14, color: "#9BA3AF", fontFamily: "Inter, sans-serif", marginLeft: 3 }}>/ {proteinTarget}g protein</span>
+                    </p>
+                    <p style={{ fontSize: 12, color: "#9BA3AF", fontFamily: "Inter, sans-serif" }}>{fuelCalories} / {calorieTarget} kcal</p>
+                  </div>
+                  <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${proteinPct}%`, background: proteinHit ? "#34D399" : "#C8965A", borderRadius: 99, transition: "width 0.8s cubic-bezier(0.22,1,0.36,1)" }} />
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <p style={{ fontFamily: "Fraunces, Georgia, serif", fontSize: 20, color: "#F2F1ED", fontWeight: 400 }}>
+                    Snap your first meal.
+                  </p>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ width: 18, height: 18, color: "#9BA3AF" }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              )}
+            </div>
+          </Link>
         </div>
 
         {/* Today's mind lesson */}
