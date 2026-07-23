@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { getLesson } from "@/lib/data/lessons";
 import { getClientProgramme, blockSessionKeys } from "@/lib/data/programme-loader";
+import WalkLogger from "@/components/WalkLogger";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -67,6 +68,7 @@ export default async function HomePage() {
     { data: recentSessions },
     { data: lastMessage },
     { data: todayFuel },
+    { data: todayWalks },
   ] = await Promise.all([
     db.from("profiles").select("*").eq("id", targetId).single(),
     db.from("programme_state").select("*").eq("user_id", targetId).single(),
@@ -74,7 +76,10 @@ export default async function HomePage() {
     db.from("training_sessions").select("session_type, completed_at").eq("user_id", targetId).not("completed_at", "is", null).order("completed_at", { ascending: false }).limit(7),
     db.from("messages").select("content").eq("user_id", targetId).eq("role", "assistant").order("created_at", { ascending: false }).limit(1),
     db.from("nutrition_logs").select("protein_g, calories").eq("user_id", targetId).eq("date", today),
+    db.from("walk_logs").select("minutes").eq("user_id", targetId).eq("date", today),
   ]);
+
+  const walkMinutesToday = (todayWalks ?? []).reduce((s, w) => s + (w.minutes ?? 0), 0);
 
   // Today's fuel — collated from the meals the client has logged so far today.
   const proteinTarget = (profile?.protein_target && profile.protein_target > 0) ? profile.protein_target : 160;
@@ -245,6 +250,11 @@ export default async function HomePage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Quick walk logger */}
+        <div className="anim-1">
+          <WalkLogger initialMinutes={walkMinutesToday} />
         </div>
 
         {/* Today's training — full-bleed photo card */}

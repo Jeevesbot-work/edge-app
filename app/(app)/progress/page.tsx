@@ -35,6 +35,7 @@ export default async function ProgressPage() {
     { data: lessonCompletions },
     { data: sleepLogs },
     { data: exerciseLogs },
+    { data: walkLogs },
   ] = await Promise.all([
     db.from("programme_state").select("*").eq("user_id", targetId).single(),
     db.from("check_ins").select("*").eq("user_id", targetId).gte("created_at", ninetyDaysAgo).order("date", { ascending: true }),
@@ -42,7 +43,21 @@ export default async function ProgressPage() {
     db.from("lesson_completions").select("*").eq("user_id", targetId),
     db.from("sleep_logs").select("*").eq("user_id", targetId).order("date", { ascending: true }).limit(30),
     db.from("exercise_logs").select("exercise_name, weight_kg, reps, created_at").eq("user_id", targetId).not("weight_kg", "is", null).gt("weight_kg", 0).order("created_at", { ascending: true }).limit(500),
+    db.from("walk_logs").select("date, minutes").eq("user_id", targetId).gte("date", new Date(Date.now() - 21 * 86400000).toISOString().split("T")[0]).order("date", { ascending: true }),
   ]);
+
+  // Walking — sum minutes per day over the last 14 days; this-week total + days walked.
+  const walkByDate = new Map<string, number>();
+  for (const w of walkLogs ?? []) walkByDate.set(w.date, (walkByDate.get(w.date) ?? 0) + (w.minutes ?? 0));
+  const walkDays: { date: string; minutes: number }[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().split("T")[0];
+    walkDays.push({ date: d, minutes: walkByDate.get(d) ?? 0 });
+  }
+  const mondayStr = (() => { const m = new Date(); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m.toISOString().split("T")[0]; })();
+  const walkMinsThisWeek = (walkLogs ?? []).filter((w) => w.date >= mondayStr).reduce((s, w) => s + (w.minutes ?? 0), 0);
+  const walkDaysThisWeek = new Set((walkLogs ?? []).filter((w) => w.date >= mondayStr).map((w) => w.date)).size;
+  const totalWalkMins = walkDays.reduce((s, w) => s + w.minutes, 0);
 
   // ── Day-in-programme: derived from the REAL start_date, not the manual
   //    counter (which resets whenever a new block is assigned). ────────────
@@ -205,6 +220,41 @@ export default async function ProgressPage() {
           <AreaChart id="energy" data={energyPoints} color={GREEN} height={70} min={0} max={5} />
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
             <span style={{ fontFamily: inter, fontSize: 10, color: MUTED }}>{energyPoints.length} days ago</span>
+            <span style={{ fontFamily: inter, fontSize: 10, color: MUTED }}>Today</span>
+          </div>
+        </div>
+      )}
+
+      {/* Walking */}
+      {totalWalkMins > 0 && (
+        <div style={cardStyle}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 4 }}>
+            <p style={label}>Walking</p>
+            <span style={{ fontFamily: inter, fontSize: 11, fontWeight: 600, color: B }}>{walkDaysThisWeek} day{walkDaysThisWeek === 1 ? "" : "s"} this week</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
+            <span style={{ fontFamily: fraunces, fontSize: 40, color: TEXT, fontWeight: 400, lineHeight: 1 }}>{walkMinsThisWeek}</span>
+            <span style={{ fontFamily: inter, fontSize: 13, color: MUTED }}>min this week</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60 }}>
+            {walkDays.map((w) => {
+              const maxM = Math.max(...walkDays.map((d) => d.minutes), 1);
+              return (
+                <div key={w.date} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", height: "100%" }}>
+                  <div style={{
+                    width: "100%", borderRadius: 4, minHeight: w.minutes > 0 ? 4 : 0,
+                    height: `${(w.minutes / maxM) * 100}%`,
+                    background: w.minutes > 0 ? B : "transparent",
+                    border: w.minutes > 0 ? "none" : "1px solid " + BORDER,
+                    borderBottom: w.minutes > 0 ? "none" : "1px solid " + BORDER,
+                    opacity: 0.85,
+                  }} />
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+            <span style={{ fontFamily: inter, fontSize: 10, color: MUTED }}>14 days ago</span>
             <span style={{ fontFamily: inter, fontSize: 10, color: MUTED }}>Today</span>
           </div>
         </div>
