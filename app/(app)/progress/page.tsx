@@ -1,9 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 export default async function ProgressPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  const previewId = cookies().get("preview_user_id")?.value;
+  const targetId = previewId ?? user!.id;
+  const db = previewId ? createAdminClient() : supabase;
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -15,12 +20,12 @@ export default async function ProgressPage() {
     { data: sleepLogs },
     { data: exerciseLogs },
   ] = await Promise.all([
-    supabase.from("programme_state").select("*").eq("user_id", user!.id).single(),
-    supabase.from("check_ins").select("*").eq("user_id", user!.id).gte("created_at", thirtyDaysAgo).order("date", { ascending: true }),
-    supabase.from("training_sessions").select("*").eq("user_id", user!.id).not("completed_at", "is", null).order("completed_at", { ascending: false }),
-    supabase.from("lesson_completions").select("*").eq("user_id", user!.id),
-    supabase.from("sleep_logs").select("*").eq("user_id", user!.id).order("date", { ascending: false }).limit(14),
-    supabase.from("exercise_logs").select("exercise_name, weight_kg, reps, created_at").eq("user_id", user!.id).not("weight_kg", "is", null).gt("weight_kg", 0).order("created_at", { ascending: true }).limit(500),
+    db.from("programme_state").select("*").eq("user_id", targetId).single(),
+    db.from("check_ins").select("*").eq("user_id", targetId).gte("created_at", thirtyDaysAgo).order("date", { ascending: true }),
+    db.from("training_sessions").select("*").eq("user_id", targetId).not("completed_at", "is", null).order("completed_at", { ascending: false }),
+    db.from("lesson_completions").select("*").eq("user_id", targetId),
+    db.from("sleep_logs").select("*").eq("user_id", targetId).order("date", { ascending: false }).limit(14),
+    db.from("exercise_logs").select("exercise_name, weight_kg, reps, created_at").eq("user_id", targetId).not("weight_kg", "is", null).gt("weight_kg", 0).order("created_at", { ascending: true }).limit(500),
   ]);
 
   const totalSessions = (sessions ?? []).length;
